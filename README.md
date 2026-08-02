@@ -13,3 +13,7 @@ This first demo includes:
 - a visual profile and shareable result.
 
 The site is a pure static application and can be deployed free on GitHub Pages or Cloudflare Pages.
+
+Live site after GitHub Pages deployment:
+
+`https://thomasjudes-del.github.io/incident-on-titan/`
