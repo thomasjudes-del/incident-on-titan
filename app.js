@@ -3,14 +3,11 @@ const app = $('#app');
 const screen = $('#screen');
 const stepText = $('#stepText');
 const progress = $('#progressBar');
-const modal = $('#modal');
-const modalContent = $('#modalContent');
 const heroKicker = $('#heroKicker');
 const heroTitle = $('#heroTitle');
 const heroMeta = $('#heroMeta');
 
 let incidentIndex = 0;
-let scans = 2;
 let startedAt = null;
 const history = [];
 const profile = { crew: 0, mission: 0, science: 0, morale: 0, risk: 0, authority: 0 };
@@ -22,11 +19,6 @@ const incidents = [
     title: 'A damaged rover requests entry',
     text: 'Two crew are injured. Quarantine is already occupied, and the rover carries a high-value sample container.',
     context: [['Storm', '11 min'], ['Rover crew', '2 injured'], ['Quarantine', 'Occupied']],
-    scan: [
-      ['Medical', 'Critical', 'Both crew require immediate trauma care.'],
-      ['Hull', 'Uncertain', 'Surface contamination cannot be ruled out.'],
-      ['Cargo', 'Irreplaceable', 'The sample is the mission’s highest-value scientific asset.']
-    ],
     choices: [
       ['Open the main airlock', 'Prioritize immediate survival.', { crew: 3, morale: 2, risk: 2, science: 1 }, { crew: 6, mission: -2, science: 4, morale: 3 }, 'You prioritized immediate survival despite uncertain contamination.'],
       ['Clear quarantine and divert the rover', 'Accept controlled risk and displace another patient.', { crew: 2, mission: 2, authority: 1 }, { crew: 3, mission: 3, science: 2, morale: -1 }, 'You chose controlled risk and displaced another patient.'],
@@ -38,11 +30,6 @@ const incidents = [
     title: 'The relay array is failing',
     text: 'Restoring communications will consume the reserve battery assigned to an exterior shelter with six technicians inside.',
     context: [['Blackout', '4 hours'], ['Shelter heat', '31 min'], ['Repair chance', '82%']],
-    scan: [
-      ['Shelter', '31 minutes', 'Thermal reserves are falling faster than predicted.'],
-      ['Relay', '82% success', 'Full battery transfer offers a strong repair probability.'],
-      ['Orbit', '4 hours', 'No replacement communications window is expected soon.']
-    ],
     choices: [
       ['Power the relay', 'Restore command visibility.', { mission: 3, authority: 1 }, { mission: 7, crew: -4, morale: -3 }, 'You restored command visibility at the expense of exterior heat.'],
       ['Protect the shelter', 'Keep the technicians alive.', { crew: 3, morale: 2 }, { crew: 5, morale: 4, mission: -5 }, 'You protected people and accepted operational blindness.'],
@@ -54,11 +41,6 @@ const incidents = [
     title: 'A geologist refuses evacuation',
     text: 'Dr. Rao claims the storm has exposed a once-in-a-century subsurface structure. Remaining outside threatens the rescue timetable.',
     context: [['Suit reserve', '19 min'], ['Discovery', 'Historic'], ['Rescue margin', '7 min']],
-    scan: [
-      ['Discovery', 'Potentially historic', 'Preliminary readings are unlike anything previously catalogued.'],
-      ['Suit', '19 minutes', 'Rao has little margin for delay or equipment failure.'],
-      ['Rescue', '7 minutes', 'The extraction window can absorb one short extension.']
-    ],
     choices: [
       ['Order immediate evacuation', 'Enforce command discipline.', { authority: 3, mission: 2 }, { crew: 3, mission: 4, science: -6, morale: -1 }, 'You enforced command discipline and abandoned the discovery.'],
       ['Authorize seven more minutes', 'Accept human risk for discovery.', { science: 3, risk: 2 }, { science: 7, crew: -2, mission: -2, morale: 1 }, 'You accepted human risk for scientific opportunity.'],
@@ -70,11 +52,6 @@ const incidents = [
     title: 'A pressure seal begins to fail',
     text: 'The safest repair requires venting the laboratory and destroying every sample gathered during the current mission.',
     context: [['Seal failure', '64%'], ['Remote patch', '39%'], ['Lab value', 'Maximum']],
-    scan: [
-      ['Seal', '64% failure', 'The failure model is worsening but not yet certain.'],
-      ['Remote patch', '39% success', 'The procedure is untested under storm vibration.'],
-      ['Samples', 'Highest on Titan', 'No duplicate archive exists.']
-    ],
     choices: [
       ['Vent the laboratory', 'Remove the immediate threat.', { crew: 3, mission: 2, science: -3 }, { crew: 5, mission: 5, science: -10, morale: 1 }, 'You sacrificed science to remove the immediate threat.'],
       ['Attempt the remote patch', 'Gamble the base to preserve the samples.', { science: 2, risk: 3 }, { crew: -2, mission: -1, science: 5, morale: -1 }, 'You gambled the base to preserve the samples.'],
@@ -86,11 +63,6 @@ const incidents = [
     title: 'The evacuation vehicle is overweight',
     text: 'It can carry the full crew or the mission archive, but not both before the methane front arrives.',
     context: [['Seats needed', '11'], ['Archive copy', 'None'], ['Storm arrival', '12 min']],
-    scan: [
-      ['Archive', 'No backup', 'Losing it erases the mission’s complete scientific record.'],
-      ['Crew', '11 seats', 'Every remaining crew member can still be evacuated.'],
-      ['Storm', '12 minutes', 'There is no time for a second trip.']
-    ],
     choices: [
       ['Take every crew member', 'Leave the archive behind.', { crew: 4, morale: 3, science: -2 }, { crew: 8, morale: 6, science: -9, mission: -2 }, 'You chose people over the accumulated mission record.'],
       ['Preserve the archive', 'Leave part of the crew behind.', { science: 4, mission: 3, authority: 2 }, { crew: -8, science: 10, mission: 5, morale: -9 }, 'You sacrificed lives to preserve humanity’s knowledge.'],
@@ -123,7 +95,7 @@ function home() {
     <div class="intro-line">No timer · No account · About 4 minutes</div>
     <div class="grid">
       <div class="tile"><b>5 decisions</b><span>Consequences stay hidden until the debrief.</span></div>
-      <div class="tile"><b>2 Deep Scans</b><span>Spend them when uncertainty matters most.</span></div>
+      <div class="tile"><b>Final command</b><span>SIBYLLE acts on the doctrine inferred from your choices.</span></div>
     </div>
     <div class="nav"><button class="primary" onclick="start()">Begin mission</button></div>
   `, 'Protocol 00', 0, 'home');
@@ -174,7 +146,6 @@ function renderIncident() {
   view(`
     <div class="incident-head">
       <div class="incident-count">Incident ${incidentIndex + 1} / ${incidents.length}</div>
-      <div class="scan-count">Deep Scans · ${scans}</div>
     </div>
     <div class="incident">
       <div class="incident-type">${item.type}</div>
@@ -184,27 +155,9 @@ function renderIncident() {
     <div class="context-strip">${item.context.map(([k,v]) => `<div class="context-chip"><b>${k}</b><span>${v}</span></div>`).join('')}</div>
     <div class="choices">
       ${item.choices.map((choice, index) => `<button class="choice" onclick="choose(${index})"><b>${choice[0]}</b><small>${choice[1]}</small></button>`).join('')}
-      ${scans ? `<button class="choice scan" onclick="scan()"><b>Run Deep Scan</b><small>Reveal additional evidence · ${scans} remaining</small></button>` : ''}
     </div>
     <p class="copy muted" style="margin-top:11px">The effects of your choice will be explained only at the end.</p>
   `, `Decision ${incidentIndex + 1}`, pct, 'incident');
-}
-
-function scan() {
-  const item = incidents[incidentIndex];
-  modalContent.innerHTML = `
-    <div class="eyebrow">Deep Scan</div>
-    <h2 class="headline">Additional evidence</h2>
-    <p class="copy muted">A scan adds context. It does not guarantee the correct decision.</p>
-    ${item.scan.map(([name,value,detail]) => `<div class="scan-row"><div class="scan-icon">⌁</div><div><b>${name} · ${value}</b><span>${detail}</span></div></div>`).join('')}
-    <div class="nav"><button class="primary" onclick="closeScan()">Return to decision</button></div>`;
-  scans -= 1;
-  modal.classList.add('open');
-}
-
-function closeScan() {
-  modal.classList.remove('open');
-  renderIncident();
 }
 
 function choose(index) {
@@ -285,7 +238,7 @@ function debrief() {
       <div class="share-line">Crew ${clamp(outcomes.crew)}% · Mission ${clamp(outcomes.mission)}% · Science ${clamp(outcomes.science)}% · Morale ${clamp(outcomes.morale)}%</div>
       <p class="copy" style="margin-top:8px">SIBYLLE learned my command doctrine and made the final decision for me. Would it understand you?</p>
     </div>
-    <div class="mission-meta">Mission time ${seconds}s · Deep Scans used ${2 - scans}/2</div>
+    <div class="mission-meta">Mission time ${seconds}s</div>
     <div class="nav"><button class="ghost" onclick="reset()">Replay demo</button><button class="primary" onclick="share()">Share result</button></div>
   `, 'Debrief', 100, 'debrief');
 }
@@ -300,11 +253,10 @@ function share() {
 }
 
 function reset() {
-  incidentIndex = 0; scans = 2; history.length = 0;
+  incidentIndex = 0; history.length = 0;
   Object.keys(profile).forEach(key => profile[key] = 0);
   Object.assign(outcomes, { crew: 72, mission: 74, science: 66, morale: 68 });
   home();
 }
 
-modal.addEventListener('click', event => { if (event.target === modal) closeScan(); });
 home();
