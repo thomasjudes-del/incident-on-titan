@@ -1,19 +1,22 @@
-# Incident on Titan — Interactive Demo
+# Incident on Titan — Weekly Incident Prototype
 
 A mobile-first static prototype for **Incident on Titan (IOTI)**.
 
-This first demo includes:
+This version tests the new V0 game loop:
 
-- the approved black-and-amber visual language;
-- a mission briefing and role assignment;
-- five captain decisions;
-- no per-question countdown;
-- hidden consequences until the debrief;
-- SIBYLLE learning the player's command doctrine and making the final decision;
-- a visual profile and shareable result.
+- one common weekly incident;
+- one assigned role;
+- three illustrated scenes;
+- exactly three choices per scene;
+- short narrative consequences between scenes;
+- three hidden internal axes: Health, Energy and Science;
+- a deterministic nonlinear score delivered by Sybille;
+- a compact shareable result.
 
-The site is a pure static application and can be deployed free on GitHub Pages or Cloudflare Pages.
+The current mission is **Incident 007 — The Black Window**, with the player acting as **Captain**.
 
-Live site after GitHub Pages deployment:
+This remains a static GitHub Pages prototype. The scoring logic is client-side for now and will move server-side only if the game loop is validated.
+
+Live site:
 
 `https://thomasjudes-del.github.io/incident-on-titan/`
