@@ -38,11 +38,29 @@ const mission = {
         { icon: '⬡', label: 'Seal the auxiliary lock', effects: { health: -7, energy: 5, science: -9 }, tag: 'seal_lock' },
         { icon: '⚗', label: 'Transfer the sample inside', effects: { health: -10, energy: -8, science: 27 }, tag: 'transfer_sample' }
       ]
+    },
+    {
+      image: 'assets/scene-cooling.svg',
+      title: 'Cooling manifold',
+      choices: [
+        { icon: '⬡', label: 'Cut the heated loop', effects: { health: 5, energy: -8, science: -15 }, tag: 'cut_loop' },
+        { icon: '◇', label: 'Flood it with liquid methane', effects: { health: -2, energy: -14, science: 9 }, tag: 'methane_flush' },
+        { icon: '⚗', label: 'Route the signal to the lab', effects: { health: -6, energy: -10, science: 21 }, tag: 'route_array' }
+      ]
+    },
+    {
+      image: 'assets/scene-core.svg',
+      title: 'Habitat threshold',
+      choices: [
+        { icon: '●', label: 'Evacuate the habitat ring', effects: { health: 12, energy: -15, science: -5 }, tag: 'evacuate_ring' },
+        { icon: '⚡', label: 'Shut down Khepri heat', effects: { health: -9, energy: 7, science: 8 }, tag: 'kill_heat' },
+        { icon: '⌁', label: 'Keep all systems stable', effects: { health: -4, energy: -5, science: 5 }, tag: 'hold_heat' }
+      ]
     }
   ]
 };
 
-const STORAGE_KEY = `ioti:${mission.id}:official-result:v3`;
+const STORAGE_KEY = `ioti:${mission.id}:official-result:v4`;
 const resetRequested = new URLSearchParams(location.search).get('reset') === '1';
 if (resetRequested) {
   localStorage.removeItem(STORAGE_KEY);
@@ -84,9 +102,9 @@ async function typeTransmission(element, text, options = {}) {
   const token = viewToken;
   const session = { skip: false };
   typingSession = session;
-  const speed = options.speed ?? 22;
-  const linePause = options.linePause ?? 280;
-  const finalPause = options.finalPause ?? 250;
+  const speed = options.speed ?? 38;
+  const linePause = options.linePause ?? 520;
+  const finalPause = options.finalPause ?? 480;
 
   element.textContent = '';
   element.classList.add('typing');
@@ -118,6 +136,7 @@ function reveal(selector) {
 }
 
 function home() {
+  app.classList.remove('sybille-control', 'takeover-hit');
   const stored = loadStoredResult();
   if (stored) {
     renderCompleted(stored);
@@ -130,17 +149,20 @@ function home() {
     <div class="eyebrow">Weekly incident #${mission.number}</div>
     <h1 class="headline">Incident on Titan</h1>
     <div id="homeTransmission" class="terminal-text compact-terminal"></div>
-    <div class="home-meta"><span>${mission.title}</span><span>≈ 3 minutes</span></div>
+    <div class="home-meta"><span>${mission.title}</span><span>≈ 5 minutes</span></div>
     <div id="homeAction" class="delayed-ui nav"><button class="primary" onclick="briefing()">Start mission</button></div>
   `);
 
-  typeTransmission($('#homeTransmission'), 'ONE ROLE.\nONE ATTEMPT.\nSYBILLE IS WATCHING.', { speed: 28, linePause: 220 })
-    .then(done => { if (done) reveal('#homeAction'); });
+  typeTransmission(
+    $('#homeTransmission'),
+    'ONE ROLE.\nONE ATTEMPT.\nFIVE DECISIONS.\nSYBILLE IS WATCHING.',
+    { speed: 45, linePause: 560, finalPause: 520 }
+  ).then(done => { if (done) reveal('#homeAction'); });
 }
 
 function briefing() {
   startedAt = Date.now();
-  setStage('brief', 'Mission brief', 8);
+  setStage('brief', 'Mission brief', 7);
   view(`
     <div class="eyebrow">Weekly incident #${mission.number}</div>
     <h1 class="headline">${mission.title}</h1>
@@ -149,9 +171,10 @@ function briefing() {
     <div id="briefAction" class="delayed-ui nav"><button class="primary" onclick="startMission()">Open incident</button></div>
   `);
 
-  typeTransmission($('#briefTransmission .terminal-text'),
+  typeTransmission(
+    $('#briefTransmission .terminal-text'),
     'METHANE STORM APPROACHING KRAKEN MARE.\nORBITAL RELAY LOST IN 02:00:00.\nROVER K-7 HAS STOPPED OUTSIDE KHEPRI.',
-    { speed: 21, linePause: 310, finalPause: 330 }
+    { speed: 38, linePause: 560, finalPause: 520 }
   ).then(done => { if (done) reveal('#briefAction'); });
 }
 
@@ -178,25 +201,54 @@ function sceneTransmission(index) {
     return 'K-7 IS MOVING UNDER REMOTE CONTROL.\nCREW BIOSIGNS ARE FALLING.\nTHE ROVER WILL REACH THE LOCK\nAS AUXILIARY POWER FAILS.';
   }
 
-  const first = flags.has('crew_first')
-    ? 'THE CREW HAS REACHED THE OUTER LOCK.'
-    : flags.has('sample_first')
-      ? 'THE SAMPLE POD IS INSIDE THE AUXILIARY LOCK.'
-      : 'K-7 HAS DOCKED WITH THE AUXILIARY LOCK.';
+  if (index === 2) {
+    const first = flags.has('crew_first')
+      ? 'THE CREW HAS REACHED THE OUTER LOCK.'
+      : flags.has('sample_first')
+        ? 'THE SAMPLE POD IS INSIDE THE AUXILIARY LOCK.'
+        : 'K-7 HAS DOCKED WITH THE AUXILIARY LOCK.';
 
-  const second = flags.has('heat_corridor')
-    ? 'THERMAL RESERVES ARE BELOW SAFE MARGIN.'
-    : flags.has('docking_power')
-      ? 'THE ROVER CARGO BAY IS OPEN TO THE LOCK.'
-      : 'THE CONTAINMENT CRADLE REPORTS UNEXPLAINED HEAT.';
+    const second = flags.has('heat_corridor')
+      ? 'THERMAL RESERVES ARE BELOW SAFE MARGIN.'
+      : flags.has('docking_power')
+        ? 'THE ROVER CARGO BAY IS OPEN TO THE LOCK.'
+        : 'THE CONTAINMENT CRADLE REPORTS UNEXPLAINED HEAT.';
 
-  return `${first}\n${second}\nONE UNKNOWN THERMAL SIGNAL DETECTED.\nINNER LOCK SENSORS FAIL IN 00:01:34.`;
+    return `${first}\n${second}\nONE UNKNOWN THERMAL SIGNAL DETECTED.\nINNER LOCK SENSORS FAIL IN 00:01:34.`;
+  }
+
+  if (index === 3) {
+    const origin = flags.has('transfer_sample')
+      ? 'THE SAMPLE IS NOW INSIDE KHEPRI.'
+      : flags.has('cycle_crew')
+        ? 'THE CREW HAS CLEARED THE AUXILIARY LOCK.'
+        : 'THE AUXILIARY LOCK IS SEALED.';
+
+    const spread = flags.has('containment_power')
+      ? 'THE CONTAINMENT CRADLE IS HEATING FROM WITHIN.'
+      : 'THE THERMAL SIGNAL HAS ENTERED THE COOLING LOOP.';
+
+    return `${origin}\n${spread}\nNO ELECTRICAL SOURCE DETECTED.\nMANIFOLD TEMPERATURE RISING.`;
+  }
+
+  const intervention = flags.has('cut_loop')
+    ? 'THE HEATED LOOP IS ISOLATED.'
+    : flags.has('methane_flush')
+      ? 'LIQUID METHANE HAS CROSSED THE MANIFOLD.'
+      : 'THE LAB ARRAY IS TRACKING THE SIGNAL.';
+
+  const escalation = flags.has('transfer_sample') || flags.has('route_array')
+    ? 'THE SIGNAL IS MOVING TOWARD THE HABITAT CORE.'
+    : 'THE SIGNAL IS MULTIPLYING ALONG THE PIPE WALL.';
+
+  return `${intervention}\n${escalation}\nHABITAT HEAT IS NOW THE PRIMARY GRADIENT.\nTHRESHOLD EVENT IN 00:00:48.`;
 }
 
 function renderScene() {
   const scene = mission.scenes[sceneIndex];
   setSceneImage(scene.image, scene.title);
-  setStage('scene', `Scene ${sceneIndex + 1} / ${mission.scenes.length}`, 18 + sceneIndex * 20);
+  const completion = 16 + Math.round((sceneIndex / mission.scenes.length) * 62);
+  setStage('scene', `Scene ${sceneIndex + 1} / ${mission.scenes.length}`, completion);
   view(`
     <div class="scene-dots">${mission.scenes.map((_, i) => `<i class="${i === sceneIndex ? 'active' : i < sceneIndex ? 'done' : ''}"></i>`).join('')}</div>
     <div class="eyebrow">Scene ${sceneIndex + 1} of ${mission.scenes.length}</div>
@@ -215,9 +267,9 @@ function renderScene() {
   `);
 
   typeTransmission($('#sceneTransmission'), sceneTransmission(sceneIndex), {
-    speed: 20,
-    linePause: 290,
-    finalPause: 320
+    speed: 38,
+    linePause: 560,
+    finalPause: 520
   }).then(done => { if (done) reveal('#sceneChoices'); });
 }
 
@@ -237,69 +289,95 @@ function choose(index) {
     sceneIndex += 1;
     if (sceneIndex < mission.scenes.length) renderScene();
     else renderSybilleTakeover();
-  }, 280);
+  }, 340);
 }
 
 function inferSybilleDecision() {
-  const human = ['crew_first', 'heat_corridor', 'cycle_crew'].filter(flag => flags.has(flag)).length;
-  const science = ['sample_first', 'containment_power', 'transfer_sample'].filter(flag => flags.has(flag)).length;
-  const control = ['rover_remote', 'docking_power', 'seal_lock'].filter(flag => flags.has(flag)).length;
+  const humanFlags = ['crew_first', 'heat_corridor', 'cycle_crew', 'evacuate_ring'];
+  const scienceFlags = ['sample_first', 'containment_power', 'transfer_sample', 'route_array'];
+  const controlFlags = ['rover_remote', 'docking_power', 'seal_lock', 'cut_loop', 'methane_flush', 'kill_heat', 'hold_heat'];
+
+  const human = humanFlags.filter(flag => flags.has(flag)).length;
+  const science = scienceFlags.filter(flag => flags.has(flag)).length;
+  const control = controlFlags.filter(flag => flags.has(flag)).length;
 
   if (human >= science && human >= control) {
     return {
-      id: 'open',
-      label: 'Open the inner seal',
-      effects: { health: 9, energy: -12, science: 3 },
-      line: 'SYBILLE OPENS THE INNER SEAL.'
+      id: 'restore',
+      label: 'Restore habitat heat',
+      effects: { health: 10, energy: -14, science: -4 },
+      line: 'SYBILLE RESTORES HABITAT HEAT.'
     };
   }
   if (science > human && science >= control) {
     return {
-      id: 'hold',
-      label: 'Hold both seals',
-      effects: { health: -6, energy: -4, science: 16 },
-      line: 'SYBILLE HOLDS BOTH SEALS.'
+      id: 'preserve',
+      label: 'Preserve the thermal signal',
+      effects: { health: -8, energy: -5, science: 18 },
+      line: 'SYBILLE PRESERVES THE THERMAL SIGNAL.'
     };
   }
   return {
     id: 'vent',
-    label: 'Vent the auxiliary lock',
-    effects: { health: -3, energy: -6, science: -20 },
-    line: 'SYBILLE VENTS THE AUXILIARY LOCK.'
+    label: 'Vent the cooling loop',
+    effects: { health: -4, energy: -8, science: -20 },
+    line: 'SYBILLE VENTS THE COOLING LOOP.'
   };
+}
+
+function activateSybilleControl() {
+  app.classList.add('sybille-control');
+  app.classList.remove('takeover-hit');
+  void app.offsetWidth;
+  app.classList.add('takeover-hit');
+  setTimeout(() => app.classList.remove('takeover-hit'), 760);
 }
 
 function renderSybilleTakeover() {
   const decision = inferSybilleDecision();
   window.sybilleDecision = decision;
-  setStage('sybille', 'Sybille', 80);
+  setSceneImage('assets/scene-core.svg', 'Sybille assumes command');
+  setStage('sybille', 'Sybille control', 86);
   view(`
     <div class="sybille-seal"><span>△</span></div>
     <div class="eyebrow">Decision window</div>
-    <div class="terminal-frame sybille-terminal"><div class="terminal-label">SYBILLE / COMMAND</div><div id="sybilleTransmission" class="terminal-text"></div></div>
+    <div class="terminal-frame sybille-terminal">
+      <div class="terminal-label">KHEPRI / CRITICAL</div>
+      <div id="sybillePreamble" class="terminal-text"></div>
+      <div id="sybilleCommand" class="terminal-text sybille-command"></div>
+    </div>
     <div id="sybilleOptions" class="delayed-ui decision-options">
-      ${['Open the inner seal', 'Vent the auxiliary lock', 'Hold both seals'].map(label => `
+      ${['Restore habitat heat', 'Vent the cooling loop', 'Preserve the thermal signal'].map(label => `
         <div class="decision-option" data-decision="${label}"><span>${label}</span><i></i></div>`).join('')}
     </div>
     <div id="sybilleResult" class="delayed-ui sybille-result">
       <strong>${decision.line}</strong>
       <span>Would you have made the same call?</span>
-      <div class="nav"><button class="primary" onclick="revealJudgment()">Reveal judgment</button></div>
+      <div class="nav"><button class="primary" onclick="revealJudgment()">Reveal score</button></div>
     </div>
   `);
 
-  typeTransmission($('#sybilleTransmission'),
-    'THERMAL SIGNAL INSIDE AUXILIARY LOCK.\nPOWER RESERVE: 11%.\nDECISION WINDOW OPEN.\n\nCOMMAND PATTERN SUFFICIENT.\nHUMAN INPUT NO LONGER REQUIRED.',
-    { speed: 25, linePause: 380, finalPause: 380 }
+  typeTransmission(
+    $('#sybillePreamble'),
+    'THERMAL SIGNAL AT HABITAT THRESHOLD.\nPOWER RESERVE: 09%.\nDECISION WINDOW OPEN.',
+    { speed: 42, linePause: 620, finalPause: 700 }
   ).then(async done => {
     if (!done) return;
+    activateSybilleControl();
+    await sleep(330);
+    const commandDone = await typeTransmission(
+      $('#sybilleCommand'),
+      'COMMAND PATTERN SUFFICIENT.\nHUMAN INPUT NO LONGER REQUIRED.',
+      { speed: 52, linePause: 760, finalPause: 650 }
+    );
+    if (!commandDone) return;
     reveal('#sybilleOptions');
-    await sleep(750);
+    await sleep(950);
     const selected = [...document.querySelectorAll('.decision-option')]
       .find(option => option.dataset.decision === decision.label);
     if (selected) selected.classList.add('selected');
     applySybilleDecision(decision);
-    await sleep(850);
+    await sleep(1100);
     reveal('#sybilleResult');
   });
 }
@@ -331,11 +409,12 @@ function calculateScore() {
 
   if (state.health < 45) score -= (45 - state.health) * 5;
   if (state.energy < 30) score -= (30 - state.energy) * 6;
-  if (flags.has('rover_remote') && flags.has('docking_power')) score += 26;
-  if (flags.has('sample_first') && flags.has('containment_power')) score += 31;
-  if (flags.has('crew_first') && flags.has('heat_corridor')) score += 24;
-  if (flags.has('transfer_sample') && flags.has('sybille_vent')) score -= 38;
-  if (flags.has('cycle_crew') && flags.has('sybille_open')) score += 20;
+  if (flags.has('crew_first') && flags.has('heat_corridor') && flags.has('cycle_crew')) score += 28;
+  if (flags.has('sample_first') && flags.has('containment_power') && flags.has('route_array')) score += 34;
+  if (flags.has('rover_remote') && flags.has('docking_power') && flags.has('cut_loop')) score += 26;
+  if (flags.has('transfer_sample') && flags.has('sybille_vent')) score -= 42;
+  if (flags.has('evacuate_ring') && flags.has('sybille_restore')) score += 22;
+  if (flags.has('kill_heat') && flags.has('sybille_preserve')) score += 18;
 
   return Math.max(0, Math.min(1000, Math.round(score)));
 }
@@ -372,10 +451,11 @@ function statusRow(icon, label, value) {
 }
 
 function renderScore(result) {
+  app.classList.remove('sybille-control', 'takeover-hit');
   window.result = result;
-  setStage('score', 'Sybille', 100);
+  setStage('score', 'Score', 100);
   view(`
-    <div class="judgment-label">Sybille’s judgment</div>
+    <div class="judgment-label">Score attributed by Sybille</div>
     <div class="score-number">${result.score}</div>
     <div class="score-max">out of 1000</div>
     <div class="status-card compact-status">
@@ -386,7 +466,7 @@ function renderScore(result) {
     <div class="simulation">Simulation ID<br><strong>${result.simulation}</strong></div>
     <div class="share-preview">
       <small>Incident ${mission.number} · ${mission.role}</small>
-      <strong>Sybille ${result.score}</strong>
+      <strong>Score ${result.score}</strong>
       <span>♥ ${result.state.health} · ⚡ ${result.state.energy} · ⚗ ${result.state.science}</span>
       <em>${pathGlyphs(result.path)}</em>
     </div>
@@ -401,16 +481,17 @@ function pathGlyphs(path) {
 }
 
 function renderCompleted(result) {
+  app.classList.remove('sybille-control', 'takeover-hit');
   window.result = result;
   setStage('completed', 'Incident complete', 100);
   view(`
     <div class="eyebrow">Weekly incident #${mission.number}</div>
     <h1 class="headline">Mission complete</h1>
-    <div class="completed-score"><small>Sybille</small><strong>${result.score}</strong><span>${result.simulation}</span></div>
+    <div class="completed-score"><small>Score attributed by Sybille</small><strong>${result.score}</strong><span>${result.simulation}</span></div>
     <p class="copy completed-copy">Your official attempt has been recorded.</p>
     <div class="share-preview">
       <small>${mission.title} · ${mission.role}</small>
-      <strong>Sybille ${result.score}</strong>
+      <strong>Score ${result.score}</strong>
       <span>♥ ${result.state.health} · ⚡ ${result.state.energy} · ⚗ ${result.state.science}</span>
       <em>${pathGlyphs(result.path)}</em>
     </div>
@@ -431,7 +512,7 @@ function loadStoredResult() {
 function shareResult() {
   const result = window.result || loadStoredResult();
   if (!result) return;
-  const text = `INCIDENT ${mission.number} · ${mission.role}\nSYBILLE ${result.score}\n${result.simulation}\n♥ ${result.state.health} · ⚡ ${result.state.energy} · ⚗ ${result.state.science}\n${pathGlyphs(result.path)}`;
+  const text = `INCIDENT ${mission.number} · ${mission.role}\nSCORE ATTRIBUTED BY SYBILLE: ${result.score}\n${result.simulation}\n♥ ${result.state.health} · ⚡ ${result.state.energy} · ⚗ ${result.state.science}\n${pathGlyphs(result.path)}`;
   if (navigator.share) {
     navigator.share({ title: 'Incident on Titan', text, url: location.href }).catch(() => {});
   } else if (navigator.clipboard) {
