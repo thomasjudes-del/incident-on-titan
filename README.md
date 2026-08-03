@@ -6,13 +6,14 @@ This version tests the current V0 game loop:
 
 - one common weekly incident;
 - one assigned role, shown without revealing Sybille's hidden priorities;
-- three illustrated and causally linked scenes;
+- five illustrated and causally linked human decision scenes;
 - exactly three choices per scene;
 - no consequence or calculation screen between choices;
 - hidden Health, Energy and Science effects;
-- progressive terminal-style transmissions;
-- a final command decision taken over by Sybille;
-- a deterministic nonlinear score;
+- deliberately paced terminal-style transmissions, skippable by tapping;
+- a sixth and final command decision taken over by Sybille;
+- a visible takeover effect using screen shake and a temporary colour shift;
+- a deterministic nonlinear score labelled **Score attributed by Sybille**;
 - one official attempt stored locally for the weekly mission;
 - a compact shareable result.
 
