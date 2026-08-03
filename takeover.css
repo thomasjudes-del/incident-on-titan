@@ -1,0 +1,120 @@
+/* V0.4: five-step mission and visible Sybille takeover. */
+
+.scene-dots{
+  width:min(270px,82%);
+  margin:0 auto 16px;
+  justify-content:space-between;
+  gap:0;
+}
+.scene-dots:before{
+  left:5px;
+  right:5px;
+  width:auto;
+}
+
+.sybille-command{
+  min-height:72px;
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid rgba(255,255,255,.08);
+  color:#ffb1be;
+}
+
+.app.sybille-control{
+  --amber:#ff3159;
+  --amber2:#ff8aa0;
+  --line:rgba(255,94,122,.2);
+  background:
+    radial-gradient(circle at 50% 10%,rgba(170,18,48,.24),transparent 42%),
+    linear-gradient(180deg,rgba(31,5,12,.25),transparent 68%);
+}
+.app.sybille-control .topbar,
+.app.sybille-control .protocol{
+  color:#ff8aa0;
+}
+.app.sybille-control .shell{
+  border-color:rgba(255,77,108,.48);
+  box-shadow:
+    0 24px 80px rgba(0,0,0,.7),
+    0 0 48px rgba(255,31,76,.18),
+    inset 0 0 44px rgba(255,31,76,.035);
+}
+.app.sybille-control .hero img{
+  filter:saturate(.72) contrast(1.18) hue-rotate(326deg);
+}
+.app.sybille-control .hero-shade{
+  background:linear-gradient(180deg,rgba(55,0,14,.12),rgba(80,0,20,.24) 54%,rgba(10,0,5,.82) 100%);
+}
+.app.sybille-control .hero-grid{
+  opacity:.13;
+  background-image:
+    linear-gradient(rgba(255,72,106,.12) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,72,106,.12) 1px,transparent 1px);
+}
+.app.sybille-control .sybille-seal{
+  border-color:rgba(255,91,120,.72);
+  background:radial-gradient(circle,rgba(255,34,75,.3),transparent 68%);
+  box-shadow:0 0 56px rgba(255,24,69,.28);
+}
+.app.sybille-control .sybille-terminal{
+  border-color:rgba(255,79,110,.62);
+  background:linear-gradient(180deg,#21070e,#09070a);
+  box-shadow:
+    inset 0 0 45px rgba(255,31,76,.08),
+    0 0 34px rgba(255,31,76,.08);
+}
+.app.sybille-control .terminal-label,
+.app.sybille-control .eyebrow,
+.app.sybille-control .terminal-text.typing:after{
+  color:#ff8aa0;
+}
+.app.sybille-control .terminal-text.typing:after{
+  background:#ff5576;
+}
+.app.sybille-control .decision-option.selected{
+  color:#ffb0be;
+  border-color:rgba(255,77,108,.72);
+  background:linear-gradient(90deg,rgba(255,34,75,.25),#140b0f);
+  box-shadow:0 0 34px rgba(255,31,76,.14);
+}
+.app.sybille-control .decision-option.selected i{
+  background:#ff3159;
+  border-color:#ff9aad;
+  box-shadow:0 0 14px rgba(255,48,89,.8);
+}
+
+.app.takeover-hit .shell{
+  animation:takeoverShock .7s cubic-bezier(.36,.07,.19,.97) both;
+}
+.app.takeover-hit:after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:50;
+  pointer-events:none;
+  background:rgba(255,27,68,.24);
+  animation:takeoverFlash .68s ease-out both;
+}
+
+@keyframes takeoverShock{
+  0%{transform:translate3d(0,0,0)}
+  12%{transform:translate3d(-9px,3px,0) rotate(-.35deg)}
+  24%{transform:translate3d(8px,-4px,0) rotate(.4deg)}
+  38%{transform:translate3d(-6px,4px,0) rotate(-.25deg)}
+  52%{transform:translate3d(5px,-2px,0) rotate(.2deg)}
+  68%{transform:translate3d(-3px,2px,0)}
+  84%{transform:translate3d(2px,-1px,0)}
+  100%{transform:translate3d(0,0,0)}
+}
+@keyframes takeoverFlash{
+  0%{opacity:0}
+  15%{opacity:1}
+  34%{opacity:.18}
+  48%{opacity:.78}
+  100%{opacity:0}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .app.takeover-hit .shell{animation:none}
+  .app.takeover-hit:after{animation:takeoverFlash .35s ease-out both}
+}
