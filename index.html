@@ -9,7 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=10">
+  <link rel="stylesheet" href="styles.css?v=11">
+  <link rel="stylesheet" href="visual-fix.css?v=11">
 </head>
 <body>
   <div class="app" id="app" data-stage="home">
@@ -26,7 +27,7 @@
         <img id="heroImage" alt="A human base beneath Saturn on Titan">
         <div class="hero-shade"></div>
         <div class="hero-grid"></div>
-        <div class="hero-copy">
+        <div class="hero-copy" aria-hidden="true">
           <span id="heroKicker">Khepri Base · Titan · 2194</span>
           <strong id="heroTitle">Incident on Titan</strong>
           <small id="heroMeta">Command simulation</small>
@@ -42,7 +43,8 @@
     <div class="modal-card"><div id="modalContent"></div></div>
   </div>
 
-  <script src="hero-fix.js?v=10"></script>
-  <script src="app.js?v=10"></script>
+  <script src="hero-fix.js?v=11"></script>
+  <script src="app.js?v=11"></script>
+  <script src="hotfix.js?v=11"></script>
 </body>
 </html>
