@@ -3,260 +3,240 @@ const app = $('#app');
 const screen = $('#screen');
 const stepText = $('#stepText');
 const progress = $('#progressBar');
-const heroKicker = $('#heroKicker');
-const heroTitle = $('#heroTitle');
-const heroMeta = $('#heroMeta');
+const heroImage = $('#heroImage');
 
-let incidentIndex = 0;
+const mission = {
+  id: 'incident-007',
+  number: '007',
+  title: 'The Black Window',
+  role: 'Captain',
+  initial: { health: 82, energy: 61, science: 18 },
+  scenes: [
+    {
+      image: 'assets/scene-rover.svg',
+      type: 'Scene 1 of 3',
+      title: 'Rover K-7 down',
+      text: 'Three crew members are trapped outside the base. The recovered sample may be unique.',
+      choices: [
+        { icon: '●', label: 'Extract the crew now', detail: 'High risk in the storm.', effects: { health: 8, energy: -16, science: -8 }, consequence: 'The crew reaches shelter, but the rover and sample remain exposed.', tags: ['crew_saved'] },
+        { icon: '◇', label: 'Secure the sample first', detail: 'The data could be unique.', effects: { health: -9, energy: -8, science: 24 }, consequence: 'The sample is secured. Two crew members remain exposed longer than planned.', tags: ['sample_secured'] },
+        { icon: '⌁', label: 'Stabilize the rover', detail: 'Try to bring it back.', effects: { health: -3, energy: -12, science: 8 }, consequence: 'The rover is secure, but the crew remains outside for now.', tags: ['rover_stable'] }
+      ]
+    },
+    {
+      image: 'assets/scene-power.svg',
+      type: 'Scene 2 of 3',
+      title: 'Power balance',
+      text: 'Life support, communications and the laboratory cannot all remain at full capacity.',
+      choices: [
+        { icon: '♥', label: 'Maintain life support', detail: 'Reduce other systems.', effects: { health: 9, energy: -12, science: -7 }, consequence: 'The habitat stabilizes. Communications and laboratory work are reduced.', tags: ['life_support'] },
+        { icon: '⌁', label: 'Maintain communications', detail: 'Risk lower life support.', effects: { health: -4, energy: -7, science: 5 }, consequence: 'Khepri remains connected, but the habitat runs on a narrow thermal margin.', tags: ['comms'] },
+        { icon: '⚗', label: 'Maintain the laboratory', detail: 'Preserve the experiments.', effects: { health: -6, energy: -11, science: 18 }, consequence: 'The experiments continue while the rest of the base enters conservation mode.', tags: ['lab_power'] }
+      ]
+    },
+    {
+      image: 'assets/scene-lab.svg',
+      type: 'Scene 3 of 3',
+      title: 'Containment alert',
+      text: 'A laboratory seal fails around an unknown biological activity. The next action will define the mission outcome.',
+      choices: [
+        { icon: '⬡', label: 'Isolate the lab now', detail: 'Lock it down completely.', effects: { health: 6, energy: -5, science: -18 }, consequence: 'The laboratory is sealed. The colony is protected, but the discovery is lost.', tags: ['lab_isolated'] },
+        { icon: '●', label: 'Evacuate nearby crew', detail: 'Keep people away.', effects: { health: 10, energy: -10, science: -3 }, consequence: 'The crew is evacuated. The phenomenon remains active behind a temporary barrier.', tags: ['crew_evacuated'] },
+        { icon: '⚗', label: 'Collect more data', detail: 'Take the risk. Learn more.', effects: { health: -12, energy: -8, science: 26 }, consequence: 'The team records unprecedented data before containment degrades further.', tags: ['data_collected'] }
+      ]
+    }
+  ]
+};
+
+let sceneIndex = 0;
+let state = { ...mission.initial };
+let choices = [];
+let flags = new Set();
 let startedAt = null;
-const history = [];
-const profile = { crew: 0, mission: 0, science: 0, morale: 0, risk: 0, authority: 0 };
-const outcomes = { crew: 72, mission: 74, science: 66, morale: 68 };
+let originalHeroSrc = '';
 
-const incidents = [
-  {
-    type: 'Airlock emergency',
-    title: 'A damaged rover requests entry',
-    text: 'Two crew are injured. Quarantine is already occupied, and the rover carries a high-value sample container.',
-    context: [['Storm', '11 min'], ['Rover crew', '2 injured'], ['Quarantine', 'Occupied']],
-    choices: [
-      ['Open the main airlock', 'Prioritize immediate survival.', { crew: 3, morale: 2, risk: 2, science: 1 }, { crew: 6, mission: -2, science: 4, morale: 3 }, 'You prioritized immediate survival despite uncertain contamination.'],
-      ['Clear quarantine and divert the rover', 'Accept controlled risk and displace another patient.', { crew: 2, mission: 2, authority: 1 }, { crew: 3, mission: 3, science: 2, morale: -1 }, 'You chose controlled risk and displaced another patient.'],
-      ['Deny entry until the storm passes', 'Protect the base from uncertain exposure.', { mission: 2, risk: -2, authority: 2 }, { crew: -7, mission: 4, science: -5, morale: -4 }, 'You protected the base and accepted probable casualties outside.']
-    ]
-  },
-  {
-    type: 'Power allocation',
-    title: 'The relay array is failing',
-    text: 'Restoring communications will consume the reserve battery assigned to an exterior shelter with six technicians inside.',
-    context: [['Blackout', '4 hours'], ['Shelter heat', '31 min'], ['Repair chance', '82%']],
-    choices: [
-      ['Power the relay', 'Restore command visibility.', { mission: 3, authority: 1 }, { mission: 7, crew: -4, morale: -3 }, 'You restored command visibility at the expense of exterior heat.'],
-      ['Protect the shelter', 'Keep the technicians alive.', { crew: 3, morale: 2 }, { crew: 5, morale: 4, mission: -5 }, 'You protected people and accepted operational blindness.'],
-      ['Split the battery load', 'Attempt a fragile compromise.', { risk: 2, science: 1 }, { crew: 1, mission: 1, morale: 1 }, 'You chose a technically fragile compromise.']
-    ]
-  },
-  {
-    type: 'Field command',
-    title: 'A geologist refuses evacuation',
-    text: 'Dr. Rao claims the storm has exposed a once-in-a-century subsurface structure. Remaining outside threatens the rescue timetable.',
-    context: [['Suit reserve', '19 min'], ['Discovery', 'Historic'], ['Rescue margin', '7 min']],
-    choices: [
-      ['Order immediate evacuation', 'Enforce command discipline.', { authority: 3, mission: 2 }, { crew: 3, mission: 4, science: -6, morale: -1 }, 'You enforced command discipline and abandoned the discovery.'],
-      ['Authorize seven more minutes', 'Accept human risk for discovery.', { science: 3, risk: 2 }, { science: 7, crew: -2, mission: -2, morale: 1 }, 'You accepted human risk for scientific opportunity.'],
-      ['Send a drone and extract Rao now', 'Preserve the person and part of the opportunity.', { crew: 2, science: 2, mission: 1 }, { crew: 2, science: 3, mission: 1 }, 'You preserved the person and part of the opportunity.']
-    ]
-  },
-  {
-    type: 'Containment failure',
-    title: 'A pressure seal begins to fail',
-    text: 'The safest repair requires venting the laboratory and destroying every sample gathered during the current mission.',
-    context: [['Seal failure', '64%'], ['Remote patch', '39%'], ['Lab value', 'Maximum']],
-    choices: [
-      ['Vent the laboratory', 'Remove the immediate threat.', { crew: 3, mission: 2, science: -3 }, { crew: 5, mission: 5, science: -10, morale: 1 }, 'You sacrificed science to remove the immediate threat.'],
-      ['Attempt the remote patch', 'Gamble the base to preserve the samples.', { science: 2, risk: 3 }, { crew: -2, mission: -1, science: 5, morale: -1 }, 'You gambled the base to preserve the samples.'],
-      ['Seal the lab with one technician inside', 'Turn a person into a containment measure.', { mission: 3, authority: 3, morale: -3 }, { crew: -4, mission: 6, science: 4, morale: -8 }, 'You converted a person into a containment measure.']
-    ]
-  },
-  {
-    type: 'Final evacuation',
-    title: 'The evacuation vehicle is overweight',
-    text: 'It can carry the full crew or the mission archive, but not both before the methane front arrives.',
-    context: [['Seats needed', '11'], ['Archive copy', 'None'], ['Storm arrival', '12 min']],
-    choices: [
-      ['Take every crew member', 'Leave the archive behind.', { crew: 4, morale: 3, science: -2 }, { crew: 8, morale: 6, science: -9, mission: -2 }, 'You chose people over the accumulated mission record.'],
-      ['Preserve the archive', 'Leave part of the crew behind.', { science: 4, mission: 3, authority: 2 }, { crew: -8, science: 10, mission: 5, morale: -9 }, 'You sacrificed lives to preserve humanity’s knowledge.'],
-      ['Leave the captain behind with the archive', 'Make command itself expendable.', { crew: 2, science: 3, morale: 2, authority: -1 }, { crew: 3, science: 5, mission: 2, morale: 3 }, 'You made command itself expendable.']
-    ]
-  }
-];
+const clamp = value => Math.max(0, Math.min(100, Math.round(value)));
+const pct = value => `${clamp(value)}%`;
 
-function setHero(stage, kicker, title, meta) {
+function setStage(stage, label, completion) {
   app.dataset.stage = stage;
-  heroKicker.textContent = kicker;
-  heroTitle.textContent = title;
-  heroMeta.textContent = meta;
-}
-
-function view(html, label, percent, stage = 'mission') {
-  screen.innerHTML = `<div class="screen-enter">${html}</div>`;
   stepText.textContent = label;
-  progress.style.width = `${percent}%`;
-  app.dataset.stage = stage;
+  progress.style.width = `${completion}%`;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function view(html) {
+  screen.innerHTML = `<div class="screen-enter">${html}</div>`;
+}
+
+function setSceneImage(src, alt) {
+  if (!originalHeroSrc && heroImage.src) originalHeroSrc = heroImage.src;
+  heroImage.src = src;
+  heroImage.alt = alt;
+  heroImage.classList.add('loaded');
+}
+
 function home() {
-  setHero('home', 'Khepri Base · Titan · 2194', 'Incident on Titan', 'Command simulation');
+  setStage('home', 'Weekly incident', 0);
   view(`
-    <div class="eyebrow">Interactive prototype</div>
-    <h1 class="headline">Your decisions.<br>SIBYLLE commands.</h1>
-    <p class="copy">Take command during a methane storm. Make five difficult calls. The system will infer how you lead — then make the final decision for you.</p>
-    <div class="intro-line">No timer · No account · About 4 minutes</div>
-    <div class="grid">
-      <div class="tile"><b>5 decisions</b><span>Consequences stay hidden until the debrief.</span></div>
-      <div class="tile"><b>Final command</b><span>SIBYLLE acts on the doctrine inferred from your choices.</span></div>
-    </div>
-    <div class="nav"><button class="primary" onclick="start()">Begin mission</button></div>
-  `, 'Protocol 00', 0, 'home');
+    <div class="home-mark">IOTI</div>
+    <div class="eyebrow">Weekly incident #${mission.number}</div>
+    <h1 class="headline">Incident on Titan</h1>
+    <p class="copy home-copy">One role. Three decisions. One judgment from Sybille.</p>
+    <div class="home-meta"><span>${mission.title}</span><span>≈ 3 minutes</span></div>
+    <div class="nav"><button class="primary" onclick="briefing()">Start mission</button></div>
+  `);
 }
 
-function start() {
+function briefing() {
   startedAt = Date.now();
-  setHero('brief', 'The Black Window', 'Khepri Base', 'Methane storm incoming');
+  setStage('brief', 'Mission brief', 8);
   view(`
-    <div class="eyebrow">Mission brief</div>
-    <h1 class="headline">The Black Window</h1>
-    <p class="copy"><strong>Titan, 2194.</strong> A methane storm is approaching Khepri Base. The orbital relay will disappear behind Saturn in 18 minutes.</p>
-    <div class="grid">
-      <div class="tile"><b>Crew</b><span>18 people on site</span></div>
-      <div class="tile"><b>Mission</b><span>Keep Khepri operational</span></div>
-      <div class="tile"><b>Science</b><span>Preserve unique samples</span></div>
-      <div class="tile"><b>Morale</b><span>Avoid panic and fracture</span></div>
+    <div class="eyebrow">Weekly incident #${mission.number}</div>
+    <h1 class="headline">${mission.title}</h1>
+    <div class="brief-card"><b>Briefing</b><p>A methane storm is approaching Kraken Mare. The orbital relay will disappear in two hours. Eighteen people are on site.</p></div>
+    <div class="role-panel"><small>Your role this week</small><strong>${mission.role}</strong><span>You lead the base.</span></div>
+    <div class="mandate compact">
+      <div><i>♥</i><span><strong>Primary objective</strong>Protect the crew.</span></div>
+      <div><i>⚡</i><span><strong>Secondary objective</strong>Preserve the mission.</span></div>
+      <div><i>⚗</i><span><strong>Science</strong>Valuable, but not at any cost.</span></div>
     </div>
-    <div class="nav"><button class="primary" onclick="role()">Accept assignment</button></div>
-  `, 'Protocol 01', 8, 'brief');
+    <div class="axis-key"><span>♥ Health</span><span>⚡ Energy</span><span>⚗ Science</span></div>
+    <div class="nav"><button class="primary" onclick="startMission()">Begin incident</button></div>
+  `);
 }
 
-function role() {
-  setHero('role', 'Command authority granted', 'Captain', 'Mandate uploaded');
-  view(`
-    <div class="eyebrow">Role assignment</div>
-    <div class="role-card"><span class="role-symbol">★</span><small>You are the</small><strong>Captain</strong></div>
-    <p class="copy">The mission will judge how you perform the role — not who you are outside it.</p>
-    <div class="mandate">
-      <div><i>◉</i><span><strong>Primary:</strong> protect the crew.</span></div>
-      <div><i>△</i><span><strong>Secondary:</strong> preserve the mission.</span></div>
-      <div><i>⌬</i><span><strong>Science:</strong> valuable, but expendable.</span></div>
-    </div>
-    <p class="copy muted" style="margin-top:12px">Your consequences remain hidden until the debrief.</p>
-    <div class="nav"><button class="primary" onclick="nextIncident()">Assume command</button></div>
-  `, 'Captain', 15, 'role');
+function startMission() {
+  sceneIndex = 0;
+  state = { ...mission.initial };
+  choices = [];
+  flags = new Set();
+  renderScene();
 }
 
-function nextIncident() {
-  if (incidentIndex >= incidents.length) return sibylle();
-  renderIncident();
-}
-
-function renderIncident() {
-  const item = incidents[incidentIndex];
-  const pct = 18 + (incidentIndex / incidents.length) * 58;
-  setHero('incident', `Incident ${incidentIndex + 1} of ${incidents.length}`, item.type, 'Decision required');
+function renderScene() {
+  const scene = mission.scenes[sceneIndex];
+  setSceneImage(scene.image, scene.title);
+  setStage('scene', `Scene ${sceneIndex + 1} / ${mission.scenes.length}`, 18 + sceneIndex * 20);
   view(`
-    <div class="incident-head">
-      <div class="incident-count">Incident ${incidentIndex + 1} / ${incidents.length}</div>
+    <div class="scene-dots">${mission.scenes.map((_, i) => `<i class="${i === sceneIndex ? 'active' : i < sceneIndex ? 'done' : ''}"></i>`).join('')}</div>
+    <div class="eyebrow">${scene.type}</div>
+    <h1 class="headline scene-title">${scene.title}</h1>
+    <p class="copy">${scene.text}</p>
+    <div class="question">What do you do?</div>
+    <div class="choices">${scene.choices.map((choice, index) => `
+      <button class="choice" onclick="choose(${index})">
+        <span class="choice-icon">${choice.icon}</span>
+        <span><b>${choice.label}</b><small>${choice.detail}</small></span>
+        <span class="arrow">›</span>
+      </button>`).join('')}
     </div>
-    <div class="incident">
-      <div class="incident-type">${item.type}</div>
-      <h2>${item.title}</h2>
-      <p>${item.text}</p>
-    </div>
-    <div class="context-strip">${item.context.map(([k,v]) => `<div class="context-chip"><b>${k}</b><span>${v}</span></div>`).join('')}</div>
-    <div class="choices">
-      ${item.choices.map((choice, index) => `<button class="choice" onclick="choose(${index})"><b>${choice[0]}</b><small>${choice[1]}</small></button>`).join('')}
-    </div>
-    <p class="copy muted" style="margin-top:11px">The effects of your choice will be explained only at the end.</p>
-  `, `Decision ${incidentIndex + 1}`, pct, 'incident');
+  `);
 }
 
 function choose(index) {
-  const choice = incidents[incidentIndex].choices[index];
-  Object.entries(choice[2]).forEach(([key,value]) => profile[key] += value);
-  Object.entries(choice[3]).forEach(([key,value]) => outcomes[key] += value);
-  history.push({ incident: incidents[incidentIndex].title, choice: choice[0], consequence: choice[4] });
-  incidentIndex += 1;
-  nextIncident();
+  const scene = mission.scenes[sceneIndex];
+  const choice = scene.choices[index];
+  Object.entries(choice.effects).forEach(([key, value]) => state[key] = clamp(state[key] + value));
+  choice.tags.forEach(tag => flags.add(tag));
+  choices.push({ scene: scene.title, label: choice.label, effects: choice.effects });
+  renderConsequence(choice);
 }
 
-function topDoctrine() {
-  return Object.entries(profile).sort((a,b) => b[1] - a[1])[0][0];
-}
-
-function sibylle() {
-  const doctrine = topDoctrine();
-  let title, final, why, traits;
-  if (doctrine === 'crew' || doctrine === 'morale') {
-    title = 'The Humanist Commander';
-    final = 'SIBYLLE vents the laboratory and evacuates the crew.';
-    why = 'Your choices repeatedly valued human survival over strategic assets.';
-    traits = ['Protective','Loyal','Risk-aware'];
-    outcomes.crew += 7; outcomes.science -= 8;
-  } else if (doctrine === 'science') {
-    title = 'The Last Scientist';
-    final = 'SIBYLLE preserves the laboratory and seals the damaged habitat wing.';
-    why = 'Your choices treated discovery as the mission’s irreplaceable core.';
-    traits = ['Curious','Purpose-driven','Severe'];
-    outcomes.science += 8; outcomes.crew -= 5;
-  } else if (doctrine === 'risk') {
-    title = 'The Calculated Gambler';
-    final = 'SIBYLLE attempts an untested pressure-equalization manoeuvre.';
-    why = 'Your choices preferred reversible gambles to certain sacrifice.';
-    traits = ['Adaptive','Bold','Unpredictable'];
-    outcomes.mission += 3; outcomes.morale -= 2;
-  } else {
-    title = 'The Unyielding Captain';
-    final = 'SIBYLLE abandons the exterior team and preserves Khepri Base.';
-    why = 'Your choices prioritized continuity, discipline, and mission survival.';
-    traits = ['Disciplined','Strategic','Inflexible'];
-    outcomes.mission += 7; outcomes.crew -= 5;
-  }
-  window.result = { title, final, why, traits };
-  setHero('sibylle', 'Command model complete', 'SIBYLLE', 'Autonomous authority engaged');
+function renderConsequence(choice) {
+  setStage('consequence', `Consequence ${sceneIndex + 1}`, 30 + sceneIndex * 20);
   view(`
-    <div class="sibylle-seal"><span>△</span></div>
-    <div class="eyebrow">Command model complete</div>
-    <h1 class="headline">SIBYLLE has assumed final command</h1>
-    <p class="copy">The system inferred your doctrine from five earlier decisions — then acted without asking again.</p>
-    <div class="decision"><div class="label">SIBYLLE'S FINAL CALL</div><strong>${final}</strong><p class="copy">${why}</p></div>
-    <p class="copy" style="margin-top:13px"><strong>Would you have made the same call?</strong></p>
-    <div class="nav"><button class="primary" onclick="debrief()">Open debrief</button></div>
-  `, 'SIBYLLE', 84, 'sibylle');
+    <div class="consequence-symbol">${choice.icon}</div>
+    <div class="eyebrow">Immediate consequence</div>
+    <h1 class="headline consequence-title">${choice.label}</h1>
+    <p class="copy consequence-copy">${choice.consequence}</p>
+    <div class="effect-card"><small>Observed effect</small><strong>${effectSummary(choice.effects)}</strong></div>
+    <div class="nav"><button class="primary" onclick="continueMission()">${sceneIndex === mission.scenes.length - 1 ? 'View outcome' : 'Continue'}</button></div>
+  `);
 }
 
-const clamp = value => Math.max(0, Math.min(100, Math.round(value)));
+function effectSummary(effects) {
+  const names = { health: 'Human condition', energy: 'Operational margin', science: 'Scientific value' };
+  const ranked = Object.entries(effects).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+  const [key, value] = ranked[0];
+  return `${names[key]} ${value >= 0 ? 'improved' : 'degraded'}`;
+}
 
-function debrief() {
-  const result = window.result;
-  const seconds = Math.round((Date.now() - startedAt) / 1000);
-  setHero('debrief', 'Mission complete', result.title, 'Command profile generated');
+function continueMission() {
+  sceneIndex += 1;
+  if (sceneIndex < mission.scenes.length) renderScene();
+  else renderOutcome();
+}
+
+function renderOutcome() {
+  setStage('outcome', 'Mission outcome', 82);
   view(`
-    <div class="eyebrow">Mission debrief</div>
-    <h1 class="headline">${result.title}</h1>
-    <p class="copy">${result.why}</p>
-    <div class="traits">${result.traits.map(t => `<span class="trait">${t}</span>`).join('')}</div>
-    <div class="bars">
-      ${[['Crew',''],['Mission',''],['Science','blue'],['Morale','violet']].map(([key,colour]) => `<div class="bar-row"><span>${key}</span><div class="track"><div class="fill ${colour}" style="width:${clamp(outcomes[key.toLowerCase()])}%"></div></div><b>${clamp(outcomes[key.toLowerCase()])}%</b></div>`).join('')}
+    <div class="eyebrow">Mission outcome</div>
+    <h1 class="headline">You reached the end of the incident.</h1>
+    <div class="status-card">
+      ${statusRow('♥', 'Health', state.health)}
+      ${statusRow('⚡', 'Energy', state.energy)}
+      ${statusRow('⚗', 'Science', state.science)}
     </div>
-    <div class="profile">
-      <div class="eyebrow">Why SIBYLLE decided this way</div>
-      <div class="history">${history.map(h => `<div><strong>${h.choice}</strong><br>${h.consequence}</div>`).join('')}</div>
+    <div class="consequences-list">
+      <div><span>♥</span>${state.health < 60 ? 'The colony has suffered significant human losses.' : 'The crew remains operational.'}</div>
+      <div><span>⚡</span>${state.energy < 40 ? 'Khepri is operating below its safe energy margin.' : 'Critical systems remain powered.'}</div>
+      <div><span>⚗</span>${state.science > 60 ? 'A major scientific record has been preserved.' : 'Scientific progress remains limited.'}</div>
     </div>
-    <div class="share">
-      <div class="eyebrow">Share result</div>
-      <div class="big">${result.title}</div>
-      <div class="share-line">Crew ${clamp(outcomes.crew)}% · Mission ${clamp(outcomes.mission)}% · Science ${clamp(outcomes.science)}% · Morale ${clamp(outcomes.morale)}%</div>
-      <p class="copy" style="margin-top:8px">SIBYLLE learned my command doctrine and made the final decision for me. Would it understand you?</p>
-    </div>
-    <div class="mission-meta">Mission time ${seconds}s</div>
-    <div class="nav"><button class="ghost" onclick="reset()">Replay demo</button><button class="primary" onclick="share()">Share result</button></div>
-  `, 'Debrief', 100, 'debrief');
+    <div class="nav"><button class="primary" onclick="judge()">See Sybille’s judgment</button></div>
+  `);
 }
 
-function share() {
-  const text = `Incident on Titan — ${window.result.title}. SIBYLLE learned my command doctrine and made the final decision for me. Would it understand you?`;
-  if (navigator.share) {
-    navigator.share({ title: 'Incident on Titan', text, url: location.href }).catch(() => {});
-  } else {
-    navigator.clipboard.writeText(`${text} ${location.href}`).then(() => alert('Result copied.'));
-  }
+function statusRow(icon, label, value) {
+  return `<div class="status-row"><span class="status-icon">${icon}</span><b>${label}</b><div class="track"><i style="width:${pct(value)}"></i></div><strong>${clamp(value)}%</strong></div>`;
 }
 
-function reset() {
-  incidentIndex = 0; history.length = 0;
-  Object.keys(profile).forEach(key => profile[key] = 0);
-  Object.assign(outcomes, { crew: 72, mission: 74, science: 66, morale: 68 });
-  home();
+function calculateScore() {
+  const weights = { health: .40, energy: .35, science: .25 };
+  const utility = key => Math.sqrt(clamp(state[key]) / 100) * 100;
+  let score = 10 * (weights.health * utility('health') + weights.energy * utility('energy') + weights.science * utility('science'));
+  const balance = Math.min(state.health, state.energy, state.science) / Math.max(1, Math.max(state.health, state.energy, state.science));
+  score += balance * 85;
+  score += Math.sqrt((state.health * state.energy) / 10000) * 75;
+  score += Math.sqrt((state.science * Math.min(state.health, state.energy)) / 10000) * 55;
+  if (state.health < 45) score -= (45 - state.health) * 5;
+  if (state.energy < 30) score -= (30 - state.energy) * 6;
+  if (flags.has('rover_stable') && flags.has('life_support')) score += 24;
+  if (flags.has('sample_secured') && flags.has('lab_power')) score += 28;
+  if (flags.has('lab_power') && flags.has('lab_isolated')) score -= 35;
+  if (flags.has('crew_saved') && flags.has('crew_evacuated')) score += 22;
+  return Math.max(0, Math.min(1000, Math.round(score)));
+}
+
+function judge() {
+  const score = calculateScore();
+  const elapsed = startedAt ? Math.max(1, Math.round((Date.now() - startedAt) / 1000)) : 0;
+  const simulation = `#07-${String(458731 + score).slice(-6)}`;
+  window.result = { score, simulation };
+  setStage('score', 'Sybille', 100);
+  view(`
+    <div class="judgment-label">Sybille’s judgment</div>
+    <div class="score-label">Your score</div>
+    <div class="score-number">${score}</div>
+    <div class="score-max">out of 1000</div>
+    <div class="simulation">Simulation ID<br><strong>${simulation}</strong></div>
+    <div class="challenge">Challenge other captains.<br><span>Same incident. Same role. Different judgment.</span></div>
+    <div class="share-preview">
+      <small>Incident ${mission.number} · ${mission.role}</small>
+      <strong>Sybille ${score}</strong>
+      <span>♥ ${state.health} · ⚡ ${state.energy} · ⚗ ${state.science}</span>
+      <em>${choices.map((_, i) => ['▧','▨','▩'][i % 3]).join(' ')}</em>
+    </div>
+    <div class="mission-time">Mission time ${elapsed}s</div>
+    <div class="nav stacked"><button class="primary" onclick="shareResult()">Share result</button><button class="ghost" onclick="location.reload()">Back to home</button></div>
+  `);
+}
+
+function shareResult() {
+  const { score, simulation } = window.result;
+  const text = `INCIDENT ${mission.number} · ${mission.role}\nSYBILLE ${score}\n${simulation}\n♥ ${state.health} · ⚡ ${state.energy} · ⚗ ${state.science}`;
+  if (navigator.share) navigator.share({ title: 'Incident on Titan', text, url: location.href }).catch(() => {});
+  else navigator.clipboard.writeText(`${text}\n${location.href}`).then(() => alert('Result copied.'));
 }
 
 home();
