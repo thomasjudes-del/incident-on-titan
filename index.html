@@ -4,22 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#07090c">
-  <meta name="description" content="Incident on Titan — a short command simulation. You decide. SIBYLLE commands.">
+  <meta name="description" content="Incident on Titan — the weekly command incident judged by Sybille.">
   <title>Incident on Titan</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=12">
-  <link rel="stylesheet" href="visual-fix.css?v=12">
+  <link rel="stylesheet" href="styles.css?v=20">
 </head>
 <body>
   <div class="app" id="app" data-stage="home">
     <header class="topbar">
-      <a class="brand" href="#" onclick="reset();return false" aria-label="Return to start">
+      <a class="brand" href="./" aria-label="Return to start">
         <span class="brand-mark">◈</span>
         <span>IOTI</span>
       </a>
-      <div class="protocol" id="stepText">Protocol 00</div>
+      <div class="protocol" id="stepText">Weekly incident</div>
     </header>
 
     <section class="shell">
@@ -27,11 +26,7 @@
         <img id="heroImage" alt="A human base beneath Saturn on Titan">
         <div class="hero-shade"></div>
         <div class="hero-grid"></div>
-        <div class="hero-copy" aria-hidden="true">
-          <span id="heroKicker">Khepri Base · Titan · 2194</span>
-          <strong id="heroTitle">Incident on Titan</strong>
-          <small id="heroMeta">Command simulation</small>
-        </div>
+        <div class="hero-copy" aria-hidden="true"></div>
       </div>
       <main id="screen" aria-live="polite"></main>
     </section>
@@ -39,8 +34,7 @@
     <div class="progress" aria-hidden="true"><i id="progressBar"></i></div>
   </div>
 
-  <script src="hero-fix.js?v=12"></script>
-  <script src="app.js?v=12"></script>
-  <script src="hotfix.js?v=12"></script>
+  <script src="hero-fix.js?v=20"></script>
+  <script src="app.js?v=20"></script>
 </body>
 </html>
