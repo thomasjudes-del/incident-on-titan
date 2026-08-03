@@ -1,16 +1,17 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-US">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#07090c">
-  <meta name="description" content="Incident on Titan — the weekly command incident judged by Sybille.">
+  <meta name="description" content="Incident on Titan — the weekly command incident scored by Sybille AI.">
   <title>Incident on Titan</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=24">
-  <link rel="stylesheet" href="takeover.css?v=24">
+  <link rel="stylesheet" href="styles.css?v=25">
+  <link rel="stylesheet" href="takeover.css?v=25">
+  <link rel="stylesheet" href="i18n.css?v=25">
 </head>
 <body>
   <div class="app" id="app" data-stage="home">
@@ -19,6 +20,10 @@
         <span class="brand-mark">◈</span>
         <span>IOTI</span>
       </a>
+      <div class="lang-switch" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        <button type="button" data-lang="fr" aria-pressed="false">FR</button>
+      </div>
       <div class="protocol" id="stepText">Weekly incident</div>
     </header>
 
@@ -35,9 +40,11 @@
     <div class="progress" aria-hidden="true"><i id="progressBar"></i></div>
   </div>
 
-  <script src="hero-fix.js?v=24"></script>
-  <script src="app.js?v=24"></script>
-  <script src="runtime-fixes.js?v=24"></script>
-  <script src="runtime-boot.js?v=24"></script>
+  <script src="hero-fix.js?v=25"></script>
+  <script src="app.js?v=25"></script>
+  <script src="i18n.js?v=25"></script>
+  <script src="runtime-fixes.js?v=25"></script>
+  <script src="share-card.js?v=25"></script>
+  <script src="runtime-boot.js?v=25"></script>
 </body>
 </html>
