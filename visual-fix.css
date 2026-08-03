@@ -1,0 +1,47 @@
+/* Focused visual corrections after first live review. */
+
+/* The hero image is scenery only. All title, button and mission content lives in the UI panel. */
+.hero-copy{display:none!important}
+.hero{background:#050607}
+.hero img{
+  left:50%!important;
+  top:0!important;
+  width:136%!important;
+  max-width:none!important;
+  height:100%!important;
+  object-fit:cover!important;
+  object-position:50% 25%!important;
+  transform:translateX(-50%)!important;
+  filter:saturate(.96) contrast(1.06)!important;
+}
+.hero-shade{
+  background:linear-gradient(180deg,rgba(4,5,7,.03),rgba(4,5,7,.08) 55%,rgba(4,5,7,.42) 100%)!important;
+}
+.hero-grid{opacity:.055!important}
+
+/* Mission screens keep a meaningful cinematic crop instead of repeating interface elements. */
+.app:not([data-stage="home"]) .hero img,
+.app[data-stage="sibylle"] .hero img,
+.app[data-stage="debrief"] .hero img{
+  width:145%!important;
+  object-position:50% 31%!important;
+  transform:translateX(-50%)!important;
+}
+
+@media(min-width:760px){
+  .hero img,
+  .app:not([data-stage="home"]) .hero img,
+  .app[data-stage="sibylle"] .hero img,
+  .app[data-stage="debrief"] .hero img{
+    left:50%!important;
+    top:0!important;
+    width:166%!important;
+    height:100%!important;
+    object-fit:cover!important;
+    object-position:50% 24%!important;
+    transform:translateX(-50%)!important;
+  }
+  .hero-shade{
+    background:linear-gradient(90deg,rgba(4,5,7,.02),rgba(4,5,7,.05) 62%,rgba(4,5,7,.26))!important;
+  }
+}
