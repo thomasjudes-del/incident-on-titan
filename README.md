@@ -2,15 +2,18 @@
 
 A mobile-first static prototype for **Incident on Titan (IOTI)**.
 
-This version tests the new V0 game loop:
+This version tests the current V0 game loop:
 
 - one common weekly incident;
-- one assigned role;
-- three illustrated scenes;
+- one assigned role, shown without revealing Sybille's hidden priorities;
+- three illustrated and causally linked scenes;
 - exactly three choices per scene;
-- short narrative consequences between scenes;
-- three hidden internal axes: Health, Energy and Science;
-- a deterministic nonlinear score delivered by Sybille;
+- no consequence or calculation screen between choices;
+- hidden Health, Energy and Science effects;
+- progressive terminal-style transmissions;
+- a final command decision taken over by Sybille;
+- a deterministic nonlinear score;
+- one official attempt stored locally for the weekly mission;
 - a compact shareable result.
 
 The current mission is **Incident 007 — The Black Window**, with the player acting as **Captain**.
