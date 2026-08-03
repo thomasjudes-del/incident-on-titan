@@ -6,7 +6,7 @@ This first demo includes:
 
 - the approved black-and-amber visual language;
 - a mission briefing and role assignment;
-- five captain decisions with optional Deep Scans;
+- five captain decisions;
 - no per-question countdown;
 - hidden consequences until the debrief;
 - SIBYLLE learning the player's command doctrine and making the final decision;
