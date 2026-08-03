@@ -1,6 +1,7 @@
 (() => {
   const hero = document.querySelector('#heroImage');
-  if (!hero) return;
+  const app = document.querySelector('#app');
+  if (!hero || !app) return;
 
   async function loadStoryboardHero() {
     try {
@@ -16,9 +17,9 @@
       const binary = atob(base64);
       const bytes = new Uint8Array(binary.length);
 
-      for (let i = 0; i < binary.length; i += 1) {
-        bytes[i] = binary.charCodeAt(i);
-      }
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+
+      if (!['home', 'brief'].includes(app.dataset.stage)) return;
 
       const objectUrl = URL.createObjectURL(new Blob([bytes], { type: 'image/webp' }));
       hero.onload = () => {
