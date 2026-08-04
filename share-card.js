@@ -1,5 +1,7 @@
 (() => {
   const tr = (key, fallback) => window.IOTI_I18N?.t(key) || fallback;
+  const SHARE_URL = 'http://confluenceofminds.com/titan/';
+  const SHARE_LABEL = 'confluenceofminds.com/titan/';
 
   function roundedRect(ctx, x, y, width, height, radius) {
     const r = Math.min(radius, width / 2, height / 2);
@@ -174,7 +176,7 @@
     ctx.fillText(tr('playSameIncident', 'Play the same incident').toUpperCase(), 110, 1252);
     ctx.fillStyle = '#91877d';
     ctx.font = '400 19px "Space Mono", monospace';
-    ctx.fillText(`${location.host}${location.pathname}`, 110, 1288);
+    ctx.fillText(SHARE_LABEL, 110, 1288);
 
     return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG generation failed')), 'image/png', 1));
   }
@@ -204,10 +206,7 @@
       const blob = await createResultPng(result);
       const filename = `incident-on-titan-${String(result.simulation || 'result').replace(/[^a-z0-9-]/gi, '')}.png`;
       const file = new File([blob], filename, { type: 'image/png' });
-      const gameUrl = new URL(location.href);
-      gameUrl.search = '';
-      gameUrl.hash = '';
-      gameUrl.searchParams.set('lang', window.IOTI_I18N?.language || 'en');
+      const gameUrl = new URL(SHARE_URL);
       const text = `${tr('weeklyIncident', 'Incident')} ${mission.number} · ${mission.role.toUpperCase()}\n${tr('scoreAttributedCaps', 'SCORE ATTRIBUTED BY SYBILLE AI')}: ${result.score}\n${result.simulation}`;
 
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
