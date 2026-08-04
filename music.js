@@ -4,9 +4,9 @@
   const app = document.querySelector('#app');
   if (!app) return;
 
-  const NORMAL_SRC = 'assets/audio/ioti-titan-pulse-v1.mp3?v=41';
-  const SYBILLE_SRC = 'assets/audio/ioti-titan-pulse-v1-dark.mp3?v=41';
-  const INTERFERENCE_SRC = 'assets/audio/sybille-takeover-interference.mp3?v=41';
+  const NORMAL_SRC = 'assets/audio/ioti-titan-pulse-v1.mp3?v=42';
+  const SYBILLE_SRC = 'assets/audio/ioti-titan-pulse-v1-dark.mp3?v=42';
+  const INTERFERENCE_SRC = 'assets/audio/sybille-takeover-interference.mp3?v=42';
   const SWITCH_DELAY_MS = 180;
 
   function createAudio(src, { loop = false, muted = false } = {}) {
@@ -100,7 +100,7 @@
       music.loop = true;
       music.currentTime = 0;
       music.load();
-      safePlay(music, 'Sybille industrial loop');
+      safePlay(music, 'Sybille command loop');
     }, SWITCH_DELAY_MS);
   }
 
@@ -125,7 +125,7 @@
       return;
     }
 
-    safePlay(music, takeover ? 'Sybille industrial loop' : 'Titan Pulse');
+    safePlay(music, takeover ? 'Sybille command loop' : 'Titan Pulse');
   });
 
   window.IOTI_AUDIO = {
