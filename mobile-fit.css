@@ -1,11 +1,5 @@
 /* Responsive gameplay layout: readable, operable and contained on mobile. */
 @media (max-width:759px){
-  html,
-  body{
-    height:100%;
-    overflow:hidden;
-  }
-
   .app[data-stage="scene"],
   .app[data-stage="sybille"],
   .app[data-stage="score"]{
