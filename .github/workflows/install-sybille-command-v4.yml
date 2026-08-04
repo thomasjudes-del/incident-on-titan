@@ -1,0 +1,33 @@
+name: Install verified Sybille command loop v4
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and verify Sybille command loop
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/audio
+          curl -fL 'https://sdmntprnortheu.oaiusercontent.com/files/00000000-2734-81f4-87dc-dac4252dc711/raw?se=2026-08-04T13:07:45Z&sp=r&sv=2026-02-06&sr=b&scid=198f3b8b-6c1b-5a04-a5ee-7a2dbf4f334f&skoid=a63e6f05-dc2f-4fa5-b0e3-b1cb9c0893bb&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-04T08:06:46Z&ske=2026-08-05T08:06:46Z&sks=b&skv=2026-02-06&sig=hqxRV0lmtdQ7ntwFWgyz7w/pGF7Id26LTymLqq%2BvYPA%3D' -o assets/audio/ioti-titan-pulse-v1-dark.mp3
+          echo '4a079d792d6f02c56f11a5f51043d020fcd6a239e108ca1d7ad896f5ac147833  assets/audio/ioti-titan-pulse-v1-dark.mp3' | sha256sum -c -
+      - name: Commit verified Sybille command loop
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f assets/audio/ioti-titan-pulse-v1-dark.mp3
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m 'Replace Sybille loop with faster metallic motif v4'
+          git push
