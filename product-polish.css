@@ -1,0 +1,90 @@
+/* Product clarity: neutral choices and a readable initial/final operational debrief. */
+.choice-icon{
+  width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(237,141,50,.35);
+  border-radius:999px;
+  background:rgba(237,141,50,.07);
+  color:var(--amber2);
+  font:700 10px "Space Mono",monospace;
+}
+
+.outcome-card{
+  margin-top:12px;
+  padding:11px 12px 10px;
+  border:1px solid rgba(237,141,50,.24);
+  border-radius:15px;
+  background:linear-gradient(180deg,#10151b,#0a0d12);
+}
+
+.outcome-title{
+  margin-bottom:8px;
+  color:var(--amber2);
+  font:700 9px "Space Mono",monospace;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+
+.outcome-head,
+.outcome-row{
+  display:grid;
+  grid-template-columns:minmax(86px,1fr) 44px 44px 48px;
+  gap:7px;
+  align-items:center;
+}
+
+.outcome-head{
+  padding-bottom:5px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+
+.outcome-head b{
+  color:#847d75;
+  font:700 7px "Space Mono",monospace;
+  text-align:right;
+  text-transform:uppercase;
+}
+
+.outcome-row{
+  min-height:31px;
+  border-bottom:1px solid rgba(255,255,255,.045);
+}
+
+.outcome-row:last-child{
+  border-bottom:0;
+}
+
+.outcome-row strong{
+  color:#d9cfc3;
+  font:700 10px "Space Mono",monospace;
+  text-transform:uppercase;
+}
+
+.outcome-row span,
+.outcome-row em{
+  font:700 11px "Space Mono",monospace;
+  text-align:right;
+  font-style:normal;
+}
+
+.outcome-row span{
+  color:#eee4d8;
+}
+
+.outcome-row em.gain{color:#86c7ff}
+.outcome-row em.loss{color:#ff8a78}
+.outcome-row em.neutral{color:#8d8984}
+
+@media(max-width:380px){
+  .outcome-head,
+  .outcome-row{
+    grid-template-columns:minmax(76px,1fr) 39px 39px 43px;
+    gap:5px;
+  }
+
+  .outcome-row strong{
+    font-size:9px;
+  }
+}
