@@ -1,0 +1,188 @@
+name: Enable unrestricted mission replay
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove attempt persistence and add replay
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f'Missing expected block: {label}')
+              return text.replace(old, new, 1)
+
+          app_path = Path('app.js')
+          app = app_path.read_text()
+
+          app = replace_once(app, """const STORAGE_KEY = `ioti:${mission.id}:official-result:v4`;
+          const resetRequested = new URLSearchParams(location.search).get('reset') === '1';
+          if (resetRequested) {
+            localStorage.removeItem(STORAGE_KEY);
+            history.replaceState({}, '', location.pathname);
+          }
+
+          """, "", 'result storage and reset block')
+
+          app = replace_once(app, """  const stored = loadStoredResult();
+            if (stored) {
+              renderCompleted(stored);
+              return;
+            }
+
+          """, "", 'stored-result home gate')
+
+          app = replace_once(
+              app,
+              "'ONE ROLE.\\nONE ATTEMPT.\\nFIVE DECISIONS.\\nSYBILLE IS WATCHING.'",
+              "'ONE ROLE.\\nONE INCIDENT.\\nFIVE DECISIONS.\\nSYBILLE IS WATCHING.'",
+              'English home transmission'
+          )
+
+          app = replace_once(
+              app,
+              "  localStorage.setItem(STORAGE_KEY, JSON.stringify(result));\n  renderScore(result);",
+              "  renderScore(result);",
+              'result persistence write'
+          )
+
+          app = replace_once(
+              app,
+              """    <div class=\"mission-time\">Mission time ${result.elapsed}s · Official attempt recorded</div>
+              <div class=\"nav stacked\"><button class=\"primary\" onclick=\"shareResult()\">Share result</button><button class=\"ghost\" onclick=\"home()\">Back to home</button></div>
+          """,
+              """    <div class=\"mission-time\">Mission time ${result.elapsed}s</div>
+              <div class=\"nav stacked\"><button class=\"primary\" onclick=\"shareResult()\">Share result</button><button class=\"ghost\" onclick=\"restartGame()\">Play again</button></div>
+          """,
+              'English score footer'
+          )
+
+          app, removed = re.subn(
+              r"\nfunction renderCompleted\(result\) \{.*?\n\}\n\nfunction loadStoredResult\(\) \{.*?\n\}\n",
+              "\n",
+              app,
+              count=1,
+              flags=re.S,
+          )
+          if removed != 1:
+              raise SystemExit('Could not remove stored-result completion functions')
+
+          app = replace_once(
+              app,
+              "function shareResult() {\n  const result = window.result || loadStoredResult();",
+              """function restartGame() {
+            location.reload();
+          }
+
+          function shareResult() {
+            const result = window.result;""",
+              'replay function and share source'
+          )
+
+          app_path.write_text(app)
+
+          i18n_path = Path('i18n.js')
+          i18n = i18n_path.read_text()
+
+          i18n = replace_once(
+              i18n,
+              "homeTransmission: 'ONE ROLE.\\nONE ATTEMPT.\\nFIVE DECISIONS.\\nSYBILLE AI IS WATCHING.',",
+              "homeTransmission: 'ONE ROLE.\\nONE INCIDENT.\\nFIVE DECISIONS.\\nSYBILLE AI IS WATCHING.',",
+              'English localized home transmission'
+          )
+          i18n = replace_once(
+              i18n,
+              "homeTransmission: 'UN RÔLE.\\nUNE SEULE TENTATIVE.\\nCINQ DÉCISIONS.\\nSYBILLE AI OBSERVE.',",
+              "homeTransmission: 'UN RÔLE.\\nUN INCIDENT.\\nCINQ DÉCISIONS.\\nSYBILLE AI OBSERVE.',",
+              'French localized home transmission'
+          )
+
+          i18n = i18n.replace("      officialRecorded: 'Official attempt recorded',\n", "")
+          i18n = i18n.replace("      attemptRecorded: 'Your official attempt has been recorded.',\n", "")
+          i18n = i18n.replace("      backHome: 'Back to home',\n", "      playAgain: 'Play again',\n")
+          i18n = i18n.replace("      officialRecorded: 'Tentative officielle enregistrée',\n", "")
+          i18n = i18n.replace("      attemptRecorded: 'Votre tentative officielle a été enregistrée.',\n", "")
+          i18n = i18n.replace("      backHome: 'Retour à l’accueil',\n", "      playAgain: 'Rejouer',\n")
+
+          i18n = replace_once(
+              i18n,
+              """    if (stage === 'score') {
+                const result = window.result || window.loadStoredResult?.();
+                if (result) return window.renderScore(result);
+              }
+              if (stage === 'completed') {
+                const result = window.result || window.loadStoredResult?.();
+                if (result) return window.renderCompleted(result);
+              }
+          """,
+              """    if (stage === 'score') {
+                const result = window.result;
+                if (result) return window.renderScore(result);
+              }
+          """,
+              'localized rerender persistence fallback'
+          )
+
+          i18n = replace_once(
+              i18n,
+              """    const stored = window.loadStoredResult?.();
+              if (stored) return window.renderCompleted(stored);
+          """,
+              "",
+              'localized stored-result home gate'
+          )
+
+          i18n = replace_once(
+              i18n,
+              """      <div class=\"mission-time\">${t('missionTime')} ${result.elapsed}s · ${t('officialRecorded')}</div>
+                <div class=\"nav stacked\"><button class=\"primary\" data-action=\"share-result\" onclick=\"shareResult()\">${t('shareResult')}</button><button class=\"ghost\" onclick=\"home()\">${t('backHome')}</button></div>
+          """,
+              """      <div class=\"mission-time\">${t('missionTime')} ${result.elapsed}s</div>
+                <div class=\"nav stacked\"><button class=\"primary\" data-action=\"share-result\" onclick=\"shareResult()\">${t('shareResult')}</button><button class=\"ghost\" onclick=\"restartGame()\">${t('playAgain')}</button></div>
+          """,
+              'localized score footer'
+          )
+
+          i18n, removed = re.subn(
+              r"\n  window\.renderCompleted = function localizedRenderCompleted\(result\) \{.*?\n  \};\n",
+              "\n",
+              i18n,
+              count=1,
+              flags=re.S,
+          )
+          if removed != 1:
+              raise SystemExit('Could not remove localized completion screen')
+
+          i18n_path.write_text(i18n)
+
+          index_path = Path('index.html')
+          index = index_path.read_text()
+          if 'v=39' not in index:
+              raise SystemExit('Expected cache version v=39 not found')
+          index_path.write_text(index.replace('v=39', 'v=40'))
+          PY
+
+      - name: Commit replay behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.js i18n.js index.html
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m 'Allow unlimited mission replays'
+          git push
