@@ -1,18 +1,21 @@
 (() => {
   'use strict';
 
-  const CREW_INITIAL = 3;
+  const config = window.IOTI_MISSION_CONFIG;
+  const scoringEngine = window.IOTI_SCORING_ENGINE;
   let answerOrders = [];
   let choiceShownAt = 0;
   let responseTimes = [];
 
-  mission.id = 'incident-001';
-  mission.number = '001';
+  if (!config || !scoringEngine) {
+    console.error('IOTI scoring configuration is unavailable.');
+    return;
+  }
+
+  mission.id = config.id;
+  mission.number = config.number;
 
   const originalChoose = typeof window.choose === 'function' ? window.choose : choose;
-  const originalCalculateScore = typeof window.calculateScore === 'function'
-    ? window.calculateScore
-    : calculateScore;
 
   function isFrench() {
     return document.documentElement.lang.toLowerCase().startsWith('fr');
@@ -121,34 +124,39 @@
     if (recorded && responseMs !== null) recorded.responseMs = Math.round(responseMs);
   };
 
-  function speedComponent() {
-    if (!responseTimes.length) return { averageSeconds: 0, adjustment: 0 };
+  function compatibilityState(outcome) {
+    const initial = outcome.initial;
+    const final = outcome.final;
+    const clampPercent = value => Math.max(0, Math.min(100, Math.round(value)));
 
-    const averageSeconds = responseTimes.reduce((sum, value) => sum + value, 0)
-      / responseTimes.length
-      / 1000;
-
-    const adjustment = Math.max(-60, Math.min(80, Math.round((10 - averageSeconds) * 10)));
     return {
-      averageSeconds: Math.round(averageSeconds * 10) / 10,
-      adjustment
+      crew: final.crew,
+      health: clampPercent((final.crew / Math.max(1, initial.crew)) * 100),
+      energy: clampPercent((final.energy / Math.max(1, initial.energy)) * 100),
+      science: clampPercent((final.science / Math.max(1, config.scoring.scienceTarget)) * 100)
     };
   }
 
-  window.revealJudgment = function revealTimedJudgment() {
-    const speed = speedComponent();
-    const score = Math.max(0, Math.min(1000, originalCalculateScore() + speed.adjustment));
+  window.revealJudgment = function revealScoredJudgment() {
+    const evaluation = scoringEngine.evaluate({
+      config,
+      choiceTags: choices.map(choice => choice.tag),
+      sybilleDecisionId: window.sybilleDecision?.id,
+      responseTimes
+    });
     const elapsed = startedAt ? Math.max(1, Math.round((Date.now() - startedAt) / 1000)) : 0;
     const simulation = `#${mission.number}-${hashPath()}`;
     const result = {
-      mission: mission.id,
-      score,
+      mission: config.id,
+      score: evaluation.score,
       simulation,
       elapsed,
-      state: { ...state },
+      state: compatibilityState(evaluation.outcome),
+      canonical: evaluation.outcome,
       decision: window.sybilleDecision,
       path: choices.map(choice => choice.index),
-      speed
+      speed: evaluation.speed,
+      scoring: evaluation.details
     };
     window.renderScore(result);
   };
@@ -177,58 +185,31 @@
         };
   }
 
-  function clampMetric(value) {
-    return Math.max(0, Math.min(100, Math.round(value)));
-  }
-
-  function calculateCrew(finalHealth) {
-    const health = clampMetric(finalHealth);
-    const lost = health >= 60 ? 0 : health >= 40 ? 1 : health >= 20 ? 2 : 3;
-    return {
-      initial: CREW_INITIAL,
-      final: Math.max(0, CREW_INITIAL - lost)
-    };
+  function formatDelta(value) {
+    return value > 0 ? `+${value}` : String(value);
   }
 
   function outcomeRow(label, initialValue, finalValue) {
-    const initial = clampMetric(initialValue);
-    const final = clampMetric(finalValue);
-    const delta = final - initial;
-    const deltaText = delta > 0 ? `+${delta}` : String(delta);
+    const delta = finalValue - initialValue;
     const deltaClass = delta > 0 ? 'gain' : delta < 0 ? 'loss' : 'neutral';
 
     return `
       <div class="outcome-row">
         <strong>${label}</strong>
-        <span>${initial}</span>
-        <span>${final}</span>
-        <em class="${deltaClass}">${deltaText}</em>
+        <span>${initialValue}</span>
+        <span>${finalValue}</span>
+        <em class="${deltaClass}">${formatDelta(delta)}</em>
       </div>`;
   }
 
-  function crewOutcomeRow(label, crew) {
-    const delta = crew.final - crew.initial;
-    const deltaClass = delta < 0 ? 'loss' : 'neutral';
-    return `
-      <div class="outcome-row">
-        <strong>${label}</strong>
-        <span>${crew.initial}</span>
-        <span>${crew.final}</span>
-        <em class="${deltaClass}">${delta}</em>
-      </div>`;
-  }
-
-  window.renderScore = function polishedRenderScore(result) {
+  window.renderScore = function canonicalRenderScore(result) {
     const labels = copy();
-    const initial = result.initial || mission.initial;
-    const finalState = result.state;
-    const crew = calculateCrew(finalState.health);
-    const enrichedResult = {
-      ...result,
-      initial: { ...initial },
-      state: { ...finalState },
-      crew
+    const canonical = result.canonical || {
+      initial: { ...config.initial },
+      final: { ...config.initial },
+      delta: { crew: 0, energy: 0, science: 0 }
     };
+    const enrichedResult = { ...result, canonical };
 
     app.classList.remove('sybille-control', 'takeover-hit');
     window.result = enrichedResult;
@@ -244,17 +225,17 @@
         <div class="outcome-head">
           <span></span><b>${labels.initial}</b><b>${labels.final}</b><b>${labels.change}</b>
         </div>
-        ${crewOutcomeRow(labels.crew, crew)}
-        ${outcomeRow(labels.energy, initial.energy, finalState.energy)}
-        ${outcomeRow(labels.science, initial.science, finalState.science)}
+        ${outcomeRow(labels.crew, canonical.initial.crew, canonical.final.crew)}
+        ${outcomeRow(labels.energy, canonical.initial.energy, canonical.final.energy)}
+        ${outcomeRow(labels.science, canonical.initial.science, canonical.final.science)}
       </div>
 
-      <div class="decision-tempo">${labels.tempo} : <strong>${enrichedResult.speed?.averageSeconds || 0}s</strong> <span>${enrichedResult.speed?.adjustment >= 0 ? '+' : ''}${enrichedResult.speed?.adjustment || 0}</span></div>
+      <div class="decision-tempo">${labels.tempo} : <strong>${enrichedResult.speed?.averageSeconds || 0}s</strong></div>
       <div class="simulation">${t('simulationId', 'Simulation ID')}<br><strong>${enrichedResult.simulation}</strong></div>
       <div class="share-preview">
         <small>INCIDENT ${mission.number} · ${mission.role}</small>
         <strong>${t('scoreStage', 'Score')} ${enrichedResult.score}</strong>
-        <span>${labels.crew} ${crew.final}/${crew.initial} · ${labels.energy} ${finalState.energy} · ${labels.science} ${finalState.science}</span>
+        <span>${labels.crew} ${canonical.final.crew} (${formatDelta(canonical.delta.crew)}) · ${labels.energy} ${canonical.final.energy} (${formatDelta(canonical.delta.energy)}) · ${labels.science} ${canonical.final.science} (${formatDelta(canonical.delta.science)})</span>
         <em>${pathGlyphs(enrichedResult.path)}</em>
       </div>
       <div class="mission-time">${t('missionTime', 'Mission time')} ${enrichedResult.elapsed}s</div>
