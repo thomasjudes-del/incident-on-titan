@@ -7,14 +7,13 @@
   display:grid;
   place-items:center;
   padding:0;
-  border:1px solid rgba(255,201,121,.22);
+  border:1px solid rgba(255,255,255,.13);
   border-radius:9px;
   color:#8b7e70;
-  background:rgba(255,255,255,.02);
+  background:rgba(255,255,255,.015);
   cursor:pointer;
   transition:border-color .2s ease,color .2s ease,background .2s ease,box-shadow .2s ease;
 }
-.music-toggle:hover{border-color:rgba(255,201,121,.5);color:var(--amber2)}
 .music-toggle span{font:700 15px/1 "Space Mono",monospace;transform:translateY(-1px)}
 .music-toggle:after{
   content:"";
@@ -23,17 +22,19 @@
   height:1px;
   background:currentColor;
   transform:rotate(-43deg);
-  opacity:0;
+  opacity:.9;
+  transition:opacity .2s ease;
 }
-.music-toggle.is-off:after{opacity:.9}
-.music-toggle.is-playing{
+.music-toggle.is-on{
   color:var(--amber2);
   border-color:rgba(237,141,50,.5);
   background:rgba(237,141,50,.09);
   box-shadow:0 0 18px rgba(237,141,50,.1);
 }
-.music-toggle.is-playing:after{opacity:0}
-.music-toggle.is-playing span{animation:musicPulse 1.6s ease-in-out infinite}
+.music-toggle.is-on:after{opacity:0}
+.music-toggle.is-on span{animation:musicPulse 1.6s ease-in-out infinite}
+.music-toggle.is-off{color:#8b7e70}
+.music-toggle:hover{border-color:rgba(255,201,121,.5);color:var(--amber2)}
 .music-toggle:focus-visible{outline:2px solid var(--amber2);outline-offset:2px}
 @keyframes musicPulse{0%,100%{opacity:.68;transform:translateY(-1px) scale(.94)}50%{opacity:1;transform:translateY(-1px) scale(1.08)}}
 @media(max-width:430px){
