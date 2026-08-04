@@ -59,6 +59,54 @@
   text-transform:uppercase;
 }
 
+.initial-state{
+  grid-column:1 / -1;
+  padding-top:9px;
+  border-top:1px solid rgba(255,255,255,.07);
+}
+
+.initial-state > small{
+  display:block;
+  margin-bottom:7px;
+  color:#847d75;
+  font:700 7px "Space Mono",monospace;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+
+.initial-state-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:7px;
+}
+
+.initial-state-grid span{
+  min-width:0;
+  padding:7px 8px;
+  border:1px solid rgba(237,141,50,.13);
+  border-radius:9px;
+  background:rgba(0,0,0,.13);
+}
+
+.initial-state-grid b{
+  display:block;
+  overflow:hidden;
+  color:#8f8175;
+  font:700 7px "Space Mono",monospace;
+  letter-spacing:.06em;
+  text-overflow:ellipsis;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+
+.initial-state-grid strong{
+  display:block;
+  margin-top:3px;
+  color:#eee4d8;
+  font:700 14px "Space Mono",monospace;
+  line-height:1;
+}
+
 .outcome-card{
   margin-top:12px;
   padding:11px 12px 10px;
@@ -140,6 +188,11 @@
   }
 
   .role-copy strong{font-size:28px}
+
+  .initial-state-grid{gap:5px}
+  .initial-state-grid span{padding:6px}
+  .initial-state-grid b{font-size:6.5px}
+  .initial-state-grid strong{font-size:13px}
 
   .outcome-head,
   .outcome-row{
