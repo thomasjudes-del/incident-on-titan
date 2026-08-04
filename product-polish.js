@@ -172,12 +172,14 @@
     return Math.max(0, Math.min(100, Math.round(value)));
   }
 
-  function calculateCrew(finalHealth) {
-    const health = clampMetric(finalHealth);
-    const lost = health >= 60 ? 0 : health >= 40 ? 1 : health >= 20 ? 2 : 3;
+  function calculateCrew(finalState) {
+    const explicitLosses = Number.isFinite(Number(finalState.crewLosses))
+      ? Math.round(Number(finalState.crewLosses))
+      : 0;
+    const lost = Math.max(0, Math.min(CREW_INITIAL, explicitLosses));
     return {
       initial: CREW_INITIAL,
-      final: Math.max(0, CREW_INITIAL - lost),
+      final: CREW_INITIAL - lost,
       lost
     };
   }
@@ -214,7 +216,7 @@
     const labels = copy();
     const initial = result.initial || mission.initial;
     const finalState = result.state;
-    const crew = calculateCrew(finalState.health);
+    const crew = calculateCrew(finalState);
     const enrichedResult = {
       ...result,
       initial: { ...initial },
