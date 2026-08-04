@@ -1,12 +1,18 @@
 (() => {
   'use strict';
 
-  const MISSION_SEQUENCE = '01';
   const CREW_INITIAL = 3;
-  const GAMEPLAY_STAGES = new Set(['scene', 'sybille', 'score']);
   let answerOrders = [];
+  let choiceShownAt = 0;
+  let responseTimes = [];
 
-  mission.sequence = MISSION_SEQUENCE;
+  mission.id = 'incident-001';
+  mission.number = '001';
+
+  const originalChoose = typeof window.choose === 'function' ? window.choose : choose;
+  const originalCalculateScore = typeof window.calculateScore === 'function'
+    ? window.calculateScore
+    : calculateScore;
 
   function isFrench() {
     return document.documentElement.lang.toLowerCase().startsWith('fr');
@@ -14,10 +20,6 @@
 
   function t(key, fallback) {
     return window.IOTI_I18N?.t(key) || fallback;
-  }
-
-  function missionCode() {
-    return `M${mission.sequence}`;
   }
 
   function randomInt(max) {
@@ -45,46 +47,13 @@
   function buildAnswerOrders() {
     const base = shuffle([0, 1, 2]);
     const direction = randomInt(2) === 0 ? 1 : 2;
-    return mission.scenes.map((_, scene) => rotate(base, (scene * direction) % 3));
+    return mission.scenes.map((_, sceneIndex) => rotate(base, (sceneIndex * direction) % 3));
   }
 
-  function syncAppFrame() {
-    document.body.classList.toggle('gameplay-locked', GAMEPLAY_STAGES.has(app.dataset.stage));
+  function resetDecisionTiming() {
+    choiceShownAt = 0;
+    responseTimes = [];
   }
-
-  function syncMissionIdentity() {
-    const stage = app.dataset.stage;
-    const eyebrow = screen.querySelector('.eyebrow');
-    if ((stage === 'home' || stage === 'brief') && eyebrow) {
-      eyebrow.textContent = `MISSION ${mission.sequence} · INCIDENT ${mission.number}`;
-    }
-  }
-
-  const originalSetStage = window.setStage;
-  if (typeof originalSetStage === 'function') {
-    window.setStage = function numberedStage(stage, label, completion) {
-      const cleanLabel = String(label).replace(/^M\d+\s*·\s*/i, '');
-      const result = originalSetStage(stage, `${missionCode()} · ${cleanLabel}`, completion);
-      syncAppFrame();
-      return result;
-    };
-  }
-
-  if (stepText && !stepText.textContent.startsWith(missionCode())) {
-    stepText.textContent = `${missionCode()} · ${stepText.textContent}`;
-  }
-
-  const stageObserver = new MutationObserver(() => {
-    syncAppFrame();
-    syncMissionIdentity();
-  });
-  stageObserver.observe(app, { attributes: true, attributeFilter: ['data-stage'] });
-
-  const screenObserver = new MutationObserver(syncMissionIdentity);
-  screenObserver.observe(screen, { childList: true, subtree: true });
-
-  syncAppFrame();
-  syncMissionIdentity();
 
   answerOrders = buildAnswerOrders();
 
@@ -94,31 +63,19 @@
     choices = [];
     flags = new Set();
     answerOrders = buildAnswerOrders();
+    resetDecisionTiming();
     window.renderScene();
   };
-
-  const originalChoose = window.choose;
-  if (typeof originalChoose === 'function') {
-    window.choose = function chooseDisplayedAnswer(originalIndex) {
-      const displayOrder = answerOrders[sceneIndex] || [0, 1, 2];
-      const displayIndex = Math.max(0, displayOrder.indexOf(originalIndex));
-      originalChoose(originalIndex);
-      const recorded = choices[choices.length - 1];
-      if (recorded) {
-        recorded.originalIndex = originalIndex;
-        recorded.index = displayIndex;
-      }
-    };
-  }
 
   window.renderScene = function shuffledRenderScene() {
     const scene = mission.scenes[sceneIndex];
     const order = answerOrders[sceneIndex] || [0, 1, 2];
     const markers = ['A', 'B', 'C'];
 
+    choiceShownAt = 0;
     setSceneImage(scene.image, scene.title);
     const completion = 16 + Math.round((sceneIndex / mission.scenes.length) * 62);
-    window.setStage('scene', `${t('scene', 'Scene')} ${sceneIndex + 1} / ${mission.scenes.length}`, completion);
+    setStage('scene', `${t('scene', 'Scene')} ${sceneIndex + 1} / ${mission.scenes.length}`, completion);
 
     view(`
       <div class="scene-dots">${mission.scenes.map((_, index) => `<i class="${index === sceneIndex ? 'active' : index < sceneIndex ? 'done' : ''}"></i>`).join('')}</div>
@@ -143,7 +100,57 @@
       speed: 38,
       linePause: 560,
       finalPause: 520
-    }).then(done => { if (done) reveal('#sceneChoices'); });
+    }).then(done => {
+      if (!done) return;
+      reveal('#sceneChoices');
+      choiceShownAt = performance.now();
+    });
+  };
+
+  window.choose = function timedChoose(originalIndex) {
+    const responseMs = choiceShownAt > 0
+      ? Math.max(0, performance.now() - choiceShownAt)
+      : null;
+
+    choiceShownAt = 0;
+    if (responseMs !== null) responseTimes.push(responseMs);
+
+    originalChoose(originalIndex);
+
+    const recorded = choices[choices.length - 1];
+    if (recorded && responseMs !== null) recorded.responseMs = Math.round(responseMs);
+  };
+
+  function speedComponent() {
+    if (!responseTimes.length) return { averageSeconds: 0, adjustment: 0 };
+
+    const averageSeconds = responseTimes.reduce((sum, value) => sum + value, 0)
+      / responseTimes.length
+      / 1000;
+
+    const adjustment = Math.max(-60, Math.min(80, Math.round((10 - averageSeconds) * 10)));
+    return {
+      averageSeconds: Math.round(averageSeconds * 10) / 10,
+      adjustment
+    };
+  }
+
+  window.revealJudgment = function revealTimedJudgment() {
+    const speed = speedComponent();
+    const score = Math.max(0, Math.min(1000, originalCalculateScore() + speed.adjustment));
+    const elapsed = startedAt ? Math.max(1, Math.round((Date.now() - startedAt) / 1000)) : 0;
+    const simulation = `#${mission.number}-${hashPath()}`;
+    const result = {
+      mission: mission.id,
+      score,
+      simulation,
+      elapsed,
+      state: { ...state },
+      decision: window.sybilleDecision,
+      path: choices.map(choice => choice.index),
+      speed
+    };
+    window.renderScore(result);
   };
 
   function copy() {
@@ -155,7 +162,8 @@
           change: 'Écart',
           crew: 'Équipage',
           energy: 'Énergie',
-          science: 'Science'
+          science: 'Science',
+          tempo: 'Temps moyen de décision'
         }
       : {
           outcome: 'Operational outcome',
@@ -164,7 +172,8 @@
           change: 'Change',
           crew: 'Crew',
           energy: 'Energy',
-          science: 'Science'
+          science: 'Science',
+          tempo: 'Average decision time'
         };
   }
 
@@ -172,15 +181,12 @@
     return Math.max(0, Math.min(100, Math.round(value)));
   }
 
-  function calculateCrew(finalState) {
-    const explicitLosses = Number.isFinite(Number(finalState.crewLosses))
-      ? Math.round(Number(finalState.crewLosses))
-      : 0;
-    const lost = Math.max(0, Math.min(CREW_INITIAL, explicitLosses));
+  function calculateCrew(finalHealth) {
+    const health = clampMetric(finalHealth);
+    const lost = health >= 60 ? 0 : health >= 40 ? 1 : health >= 20 ? 2 : 3;
     return {
       initial: CREW_INITIAL,
-      final: CREW_INITIAL - lost,
-      lost
+      final: Math.max(0, CREW_INITIAL - lost)
     };
   }
 
@@ -216,22 +222,17 @@
     const labels = copy();
     const initial = result.initial || mission.initial;
     const finalState = result.state;
-    const crew = calculateCrew(finalState);
+    const crew = calculateCrew(finalState.health);
     const enrichedResult = {
       ...result,
       initial: { ...initial },
       state: { ...finalState },
-      crew,
-      missionSequence: mission.sequence
+      crew
     };
 
     app.classList.remove('sybille-control', 'takeover-hit');
     window.result = enrichedResult;
-    window.setStage('score', t('scoreStage', 'Score'), 100);
-
-    const energyDelta = clampMetric(finalState.energy) - clampMetric(initial.energy);
-    const scienceDelta = clampMetric(finalState.science) - clampMetric(initial.science);
-    const signed = value => value > 0 ? `+${value}` : String(value);
+    setStage('score', t('scoreStage', 'Score'), 100);
 
     view(`
       <div class="judgment-label">${t('scoreAttributed', 'Score attributed by Sybille AI')}</div>
@@ -248,11 +249,12 @@
         ${outcomeRow(labels.science, initial.science, finalState.science)}
       </div>
 
+      <div class="decision-tempo">${labels.tempo} : <strong>${enrichedResult.speed?.averageSeconds || 0}s</strong> <span>${enrichedResult.speed?.adjustment >= 0 ? '+' : ''}${enrichedResult.speed?.adjustment || 0}</span></div>
       <div class="simulation">${t('simulationId', 'Simulation ID')}<br><strong>${enrichedResult.simulation}</strong></div>
       <div class="share-preview">
-        <small>MISSION ${mission.sequence} · INCIDENT ${mission.number} · ${mission.role}</small>
+        <small>INCIDENT ${mission.number} · ${mission.role}</small>
         <strong>${t('scoreStage', 'Score')} ${enrichedResult.score}</strong>
-        <span>${labels.crew} ${crew.final}/${crew.initial} (${crew.final - crew.initial}) · ${labels.energy} ${finalState.energy} (${signed(energyDelta)}) · ${labels.science} ${finalState.science} (${signed(scienceDelta)})</span>
+        <span>${labels.crew} ${crew.final}/${crew.initial} · ${labels.energy} ${finalState.energy} · ${labels.science} ${finalState.science}</span>
         <em>${pathGlyphs(enrichedResult.path)}</em>
       </div>
       <div class="mission-time">${t('missionTime', 'Mission time')} ${enrichedResult.elapsed}s</div>
@@ -262,4 +264,8 @@
       </div>
     `);
   };
+
+  queueMicrotask(() => {
+    if (app.dataset.stage === 'home') window.home();
+  });
 })();
