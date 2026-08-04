@@ -2,124 +2,81 @@
   'use strict';
 
   const AUDIO_CHUNKS = [
-    'assets/audio/titan-pulse-v1-00.txt',
-    'assets/audio/titan-pulse-v1-01.txt'
+    'assets/audio/titan-pulse-v1-game-00.txt',
+    'assets/audio/titan-pulse-v1-game-01.txt'
   ];
-  const DEFAULT_VOLUME = 0.28;
   const app = document.querySelector('#app');
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
 
-  if (!app || !AudioContextClass) return;
+  if (!app) return;
 
-  let context = null;
-  let gain = null;
-  let source = null;
-  let decodedBuffer = null;
-  let decodePromise = null;
-  let starting = false;
+  let music = null;
+  let sourceUrl = null;
+  let sourcePromise = null;
   let started = false;
+  let starting = false;
 
-  function decodeBase64Chunk(encoded) {
+  function decodeChunk(encoded) {
     const clean = encoded.replace(/[^A-Za-z0-9+/=]/g, '');
     const binary = atob(clean);
     const bytes = new Uint8Array(binary.length);
-
     for (let index = 0; index < binary.length; index += 1) {
       bytes[index] = binary.charCodeAt(index);
     }
     return bytes;
   }
 
-  const encodedAudioPromise = Promise.all(
-    AUDIO_CHUNKS.map(async path => {
-      const response = await fetch(`${path}?v=34`, { cache: 'force-cache' });
-      if (!response.ok) throw new Error(`Audio unavailable: ${path}`);
-      return response.text();
-    })
-  ).then(parts => {
-    // Each stored fragment is decoded independently, then the original MP3
-    // bytes are joined. Joining the Base64 text itself caused the regressions.
-    const chunks = parts.map(decodeBase64Chunk);
-    const totalLength = chunks.reduce((total, chunk) => total + chunk.length, 0);
-    const merged = new Uint8Array(totalLength);
-    let offset = 0;
+  function prepareMusic() {
+    if (sourcePromise) return sourcePromise;
 
-    chunks.forEach(chunk => {
-      merged.set(chunk, offset);
-      offset += chunk.length;
-    });
+    sourcePromise = Promise.all(
+      AUDIO_CHUNKS.map(async path => {
+        const response = await fetch(`${path}?v=36`, { cache: 'force-cache' });
+        if (!response.ok) throw new Error(`Audio unavailable: ${path}`);
+        return response.text();
+      })
+    ).then(parts => {
+      const chunks = parts.map(decodeChunk);
+      const totalLength = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
+      const merged = new Uint8Array(totalLength);
+      let offset = 0;
 
-    if (merged.byteLength < 500000) {
-      throw new Error('Titan Pulse MP3 is incomplete.');
-    }
-    return merged.buffer;
-  });
+      chunks.forEach(chunk => {
+        merged.set(chunk, offset);
+        offset += chunk.byteLength;
+      });
 
-  function ensureContext() {
-    if (context) return context;
-
-    context = new AudioContextClass();
-    gain = context.createGain();
-    gain.gain.value = 0;
-    gain.connect(context.destination);
-    return context;
-  }
-
-  function fadeTo(value, seconds = 1) {
-    if (!context || !gain) return;
-    const now = context.currentTime;
-    gain.gain.cancelScheduledValues(now);
-    gain.gain.setValueAtTime(gain.gain.value, now);
-    gain.gain.linearRampToValueAtTime(value, now + seconds);
-  }
-
-  function decodeAudio(audioContext, arrayBuffer) {
-    return new Promise((resolve, reject) => {
-      const result = audioContext.decodeAudioData(arrayBuffer.slice(0), resolve, reject);
-      if (result && typeof result.then === 'function') {
-        result.then(resolve, reject);
+      if (merged.byteLength < 100000) {
+        throw new Error('Titan Pulse audio is incomplete.');
       }
-    });
-  }
 
-  function getDecodedBuffer(audioContext) {
-    if (decodedBuffer) return Promise.resolve(decodedBuffer);
-    if (!decodePromise) {
-      decodePromise = encodedAudioPromise
-        .then(arrayBuffer => decodeAudio(audioContext, arrayBuffer))
-        .then(buffer => {
-          decodedBuffer = buffer;
-          return buffer;
-        })
-        .catch(error => {
-          decodePromise = null;
-          throw error;
-        });
-    }
-    return decodePromise;
+      sourceUrl = URL.createObjectURL(new Blob([merged], { type: 'audio/mpeg' }));
+      music = new Audio(sourceUrl);
+      music.loop = true;
+      music.preload = 'auto';
+      music.volume = 0.28;
+      music.playsInline = true;
+      music.setAttribute('playsinline', '');
+      music.load();
+      return music;
+    }).catch(error => {
+      sourcePromise = null;
+      console.error('Titan Pulse could not be prepared.', error);
+      throw error;
+    });
+
+    return sourcePromise;
   }
 
   async function startMusic() {
-    if (starting || started) return;
+    if (started || starting) return;
     starting = true;
 
     try {
-      const audioContext = ensureContext();
-      if (audioContext.state === 'suspended') await audioContext.resume();
-      const buffer = await getDecodedBuffer(audioContext);
-
-      source = audioContext.createBufferSource();
-      source.buffer = buffer;
-      source.loop = true;
-      source.loopStart = 0;
-      source.loopEnd = buffer.duration;
-      source.connect(gain);
-      source.start(0);
-
+      const audio = music || await prepareMusic();
+      await audio.play();
       started = true;
-      fadeTo(DEFAULT_VOLUME, 1.15);
     } catch (error) {
-      console.error('The validated Titan Pulse MP3 could not start.', error);
+      console.error('Titan Pulse could not start.', error);
     } finally {
       starting = false;
     }
@@ -133,14 +90,18 @@
   }, true);
 
   document.addEventListener('visibilitychange', () => {
-    if (!context || !started) return;
-    if (document.hidden) context.suspend().catch(() => {});
-    else context.resume().catch(() => {});
+    if (!music || !started) return;
+    if (document.hidden) music.pause();
+    else music.play().catch(() => {});
   });
 
-  encodedAudioPromise.catch(error => {
-    console.error('Titan Pulse MP3 preload failed.', error);
+  window.addEventListener('beforeunload', () => {
+    if (sourceUrl) URL.revokeObjectURL(sourceUrl);
   });
 
   window.IOTI_AUDIO = { play: startMusic };
+
+  // Prepare the exact audio object before the first interaction. Playback itself
+  // still begins only from the user's click on the mission button.
+  prepareMusic().catch(() => {});
 })();
