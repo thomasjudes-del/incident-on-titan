@@ -1,1 +1,0 @@
-Staging chunks for the validated 51.226 s Titan Pulse V1 MP3 derivative. Final SHA-256 is verified by workflow before publication.
