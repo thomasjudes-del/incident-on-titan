@@ -1,6 +1,6 @@
 (() => {
   const tr = (key, fallback) => window.IOTI_I18N?.t(key) || fallback;
-  const SHARE_URL = 'http://confluenceofminds.com/titan/';
+  const SHARE_URL = 'https://confluenceofminds.com/titan/';
   const SHARE_LABEL = 'confluenceofminds.com/titan/';
 
   function roundedRect(ctx, x, y, width, height, radius) {
