@@ -12,7 +12,7 @@
       missionBrief: 'Mission brief',
       scoreStage: 'Score',
       sybilleControl: 'Sybille AI control',
-      homeTransmission: 'ONE ROLE.\nONE ATTEMPT.\nFIVE DECISIONS.\nSYBILLE AI IS WATCHING.',
+      homeTransmission: 'ONE ROLE.\nONE INCIDENT.\nFIVE DECISIONS.\nSYBILLE AI IS WATCHING.',
       approxTime: '≈ 5 minutes',
       startMission: 'Start mission',
       yourRole: 'Your role',
@@ -34,11 +34,9 @@
       energy: 'Energy',
       science: 'Science',
       missionTime: 'Mission time',
-      officialRecorded: 'Official attempt recorded',
       missionComplete: 'Mission complete',
-      attemptRecorded: 'Your official attempt has been recorded.',
       shareResult: 'Share result',
-      backHome: 'Back to home',
+      playAgain: 'Play again',
       preparingImage: 'Preparing image…',
       decisionPath: 'Decision path',
       playSameIncident: 'Play the same incident',
@@ -64,7 +62,7 @@
       missionBrief: 'Briefing de mission',
       scoreStage: 'Score',
       sybilleControl: 'Contrôle de Sybille AI',
-      homeTransmission: 'UN RÔLE.\nUNE SEULE TENTATIVE.\nCINQ DÉCISIONS.\nSYBILLE AI OBSERVE.',
+      homeTransmission: 'UN RÔLE.\nUN INCIDENT.\nCINQ DÉCISIONS.\nSYBILLE AI OBSERVE.',
       approxTime: '≈ 5 minutes',
       startMission: 'Commencer la mission',
       yourRole: 'Votre rôle',
@@ -86,11 +84,9 @@
       energy: 'Énergie',
       science: 'Science',
       missionTime: 'Durée de mission',
-      officialRecorded: 'Tentative officielle enregistrée',
       missionComplete: 'Mission terminée',
-      attemptRecorded: 'Votre tentative officielle a été enregistrée.',
       shareResult: 'Partager le résultat',
-      backHome: 'Retour à l’accueil',
+      playAgain: 'Rejouer',
       preparingImage: 'Création de l’image…',
       decisionPath: 'Trajectoire des décisions',
       playSameIncident: 'Jouer au même incident',
@@ -180,12 +176,8 @@
     if (stage === 'scene') return window.renderScene();
     if (stage === 'sybille') return window.renderSybilleTakeover();
     if (stage === 'score') {
-      const result = window.result || window.loadStoredResult?.();
+      const result = window.result;
       if (result) return window.renderScore(result);
-    }
-    if (stage === 'completed') {
-      const result = window.result || window.loadStoredResult?.();
-      if (result) return window.renderCompleted(result);
     }
     return window.home();
   }
@@ -236,8 +228,6 @@
 
   window.home = function localizedHome() {
     app.classList.remove('sybille-control', 'takeover-hit');
-    const stored = window.loadStoredResult?.();
-    if (stored) return window.renderCompleted(stored);
     setStage('home', t('weeklyIncident'), 0);
     view(`
       <div class="home-mark">IOTI</div>
@@ -363,29 +353,11 @@
         <span>♥ ${result.state.health} · ⚡ ${result.state.energy} · ⚗ ${result.state.science}</span>
         <em>${pathGlyphs(result.path)}</em>
       </div>
-      <div class="mission-time">${t('missionTime')} ${result.elapsed}s · ${t('officialRecorded')}</div>
-      <div class="nav stacked"><button class="primary" data-action="share-result" onclick="shareResult()">${t('shareResult')}</button><button class="ghost" onclick="home()">${t('backHome')}</button></div>
+      <div class="mission-time">${t('missionTime')} ${result.elapsed}s</div>
+      <div class="nav stacked"><button class="primary" data-action="share-result" onclick="shareResult()">${t('shareResult')}</button><button class="ghost" onclick="restartGame()">${t('playAgain')}</button></div>
     `);
   };
 
-  window.renderCompleted = function localizedRenderCompleted(result) {
-    app.classList.remove('sybille-control', 'takeover-hit');
-    window.result = result;
-    setStage('completed', t('incidentComplete'), 100);
-    view(`
-      <div class="eyebrow">${t('weeklyIncident')} #${mission.number}</div>
-      <h1 class="headline">${t('missionComplete')}</h1>
-      <div class="completed-score"><small>${t('scoreAttributed')}</small><strong>${result.score}</strong><span>${result.simulation}</span></div>
-      <p class="copy completed-copy">${t('attemptRecorded')}</p>
-      <div class="share-preview">
-        <small>${mission.title} · ${mission.role}</small>
-        <strong>${t('scoreStage')} ${result.score}</strong>
-        <span>♥ ${result.state.health} · ⚡ ${result.state.energy} · ⚗ ${result.state.science}</span>
-        <em>${pathGlyphs(result.path)}</em>
-      </div>
-      <div class="nav"><button class="primary" data-action="share-result" onclick="shareResult()">${t('shareResult')}</button></div>
-    `);
-  };
 
   window.IOTI_I18N = {
     t,

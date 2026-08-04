@@ -60,13 +60,6 @@ const mission = {
   ]
 };
 
-const STORAGE_KEY = `ioti:${mission.id}:official-result:v4`;
-const resetRequested = new URLSearchParams(location.search).get('reset') === '1';
-if (resetRequested) {
-  localStorage.removeItem(STORAGE_KEY);
-  history.replaceState({}, '', location.pathname);
-}
-
 let sceneIndex = 0;
 let state = { ...mission.initial };
 let choices = [];
@@ -137,12 +130,6 @@ function reveal(selector) {
 
 function home() {
   app.classList.remove('sybille-control', 'takeover-hit');
-  const stored = loadStoredResult();
-  if (stored) {
-    renderCompleted(stored);
-    return;
-  }
-
   setStage('home', 'Weekly incident', 0);
   view(`
     <div class="home-mark">IOTI</div>
@@ -155,7 +142,7 @@ function home() {
 
   typeTransmission(
     $('#homeTransmission'),
-    'ONE ROLE.\nONE ATTEMPT.\nFIVE DECISIONS.\nSYBILLE IS WATCHING.',
+    'ONE ROLE.\nONE INCIDENT.\nFIVE DECISIONS.\nSYBILLE IS WATCHING.',
     { speed: 45, linePause: 560, finalPause: 520 }
   ).then(done => { if (done) reveal('#homeAction'); });
 }
@@ -442,7 +429,6 @@ function revealJudgment() {
     decision: window.sybilleDecision,
     path: choices.map(choice => choice.index)
   };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
   renderScore(result);
 }
 
@@ -470,8 +456,8 @@ function renderScore(result) {
       <span>♥ ${result.state.health} · ⚡ ${result.state.energy} · ⚗ ${result.state.science}</span>
       <em>${pathGlyphs(result.path)}</em>
     </div>
-    <div class="mission-time">Mission time ${result.elapsed}s · Official attempt recorded</div>
-    <div class="nav stacked"><button class="primary" onclick="shareResult()">Share result</button><button class="ghost" onclick="home()">Back to home</button></div>
+    <div class="mission-time">Mission time ${result.elapsed}s</div>
+    <div class="nav stacked"><button class="primary" onclick="shareResult()">Share result</button><button class="ghost" onclick="restartGame()">Play again</button></div>
   `);
 }
 
@@ -480,37 +466,13 @@ function pathGlyphs(path) {
   return path.map(index => glyphs[index] || '▧').join(' ');
 }
 
-function renderCompleted(result) {
-  app.classList.remove('sybille-control', 'takeover-hit');
-  window.result = result;
-  setStage('completed', 'Incident complete', 100);
-  view(`
-    <div class="eyebrow">Weekly incident #${mission.number}</div>
-    <h1 class="headline">Mission complete</h1>
-    <div class="completed-score"><small>Score attributed by Sybille</small><strong>${result.score}</strong><span>${result.simulation}</span></div>
-    <p class="copy completed-copy">Your official attempt has been recorded.</p>
-    <div class="share-preview">
-      <small>${mission.title} · ${mission.role}</small>
-      <strong>Score ${result.score}</strong>
-      <span>♥ ${result.state.health} · ⚡ ${result.state.energy} · ⚗ ${result.state.science}</span>
-      <em>${pathGlyphs(result.path)}</em>
-    </div>
-    <div class="nav"><button class="primary" onclick="shareResult()">Share result</button></div>
-  `);
-}
 
-function loadStoredResult() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch (error) {
-    console.warn('Stored result could not be loaded.', error);
-    return null;
-  }
+function restartGame() {
+  location.reload();
 }
 
 function shareResult() {
-  const result = window.result || loadStoredResult();
+  const result = window.result;
   if (!result) return;
   const text = `INCIDENT ${mission.number} · ${mission.role}\nSCORE ATTRIBUTED BY SYBILLE: ${result.score}\n${result.simulation}\n♥ ${result.state.health} · ⚡ ${result.state.energy} · ⚗ ${result.state.science}\n${pathGlyphs(result.path)}`;
   if (navigator.share) {
