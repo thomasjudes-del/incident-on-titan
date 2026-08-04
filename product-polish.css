@@ -77,6 +77,9 @@
 .outcome-row em.loss{color:#ff8a78}
 .outcome-row em.neutral{color:#8d8984}
 
+/* The response-time component affects the score but stays out of the compact UI. */
+.decision-tempo{display:none}
+
 @media(max-width:380px){
   .outcome-head,
   .outcome-row{
