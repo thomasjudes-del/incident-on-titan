@@ -3,7 +3,10 @@
 
   const STORAGE_KEY = 'ioti:music-muted:v2';
   const DEFAULT_VOLUME = 0.28;
-  const AUDIO_CHUNK = 'assets/audio/titan-pulse-v1-game-00.txt';
+  const AUDIO_CHUNKS = [
+    'assets/audio/titan-pulse-v1-00.txt',
+    'assets/audio/titan-pulse-v1-01.txt'
+  ];
 
   const app = document.querySelector('#app');
   const toggle = document.querySelector('#musicToggle');
@@ -25,7 +28,6 @@
   let sourceUrl = null;
   let loading = false;
   let started = false;
-  let failed = false;
   let takeoverActive = false;
   let muted = localStorage.getItem(STORAGE_KEY) === 'true';
 
@@ -33,39 +35,17 @@
     return document.documentElement.lang.toLowerCase().startsWith('fr') ? 'fr' : 'en';
   }
 
-  function labels() {
-    return language() === 'fr'
-      ? {
-          play: 'Activer la musique',
-          mute: 'Couper la musique',
-          loading: 'Chargement de la musique',
-          retry: 'Relancer la musique'
-        }
-      : {
-          play: 'Play music',
-          mute: 'Mute music',
-          loading: 'Loading music',
-          retry: 'Retry music'
-        };
-  }
-
   function updateToggle() {
-    const text = labels();
-    const playing = started && !muted && !failed;
+    const playing = started && !muted;
+    const label = language() === 'fr'
+      ? (playing ? 'Couper le son' : 'Activer le son')
+      : (playing ? 'Mute sound' : 'Play sound');
 
     toggle.classList.toggle('is-playing', playing);
-    toggle.classList.toggle('is-muted', muted);
-    toggle.classList.toggle('is-loading', loading);
-    toggle.classList.toggle('is-error', failed);
-    toggle.dataset.soundState = failed ? 'error' : loading ? 'loading' : muted ? 'muted' : playing ? 'playing' : 'ready';
+    toggle.classList.toggle('is-off', !playing);
     toggle.setAttribute('aria-pressed', String(playing));
-
-    const label = failed ? text.retry : loading ? text.loading : playing ? text.mute : text.play;
     toggle.setAttribute('aria-label', label);
     toggle.title = label;
-
-    const glyph = toggle.querySelector('span');
-    if (glyph) glyph.textContent = failed ? '!' : '♪';
   }
 
   function ensureContext() {
@@ -108,14 +88,18 @@
   function prepareSource() {
     if (sourceReadyPromise) return sourceReadyPromise;
 
-    sourceReadyPromise = fetch(`${AUDIO_CHUNK}?v=29`, { cache: 'force-cache' })
-      .then(response => {
-        if (!response.ok) throw new Error(`Audio unavailable: ${response.status}`);
+    sourceReadyPromise = Promise.all(
+      AUDIO_CHUNKS.map(async path => {
+        const response = await fetch(`${path}?v=30`, { cache: 'force-cache' });
+        if (!response.ok) throw new Error(`Audio unavailable: ${path}`);
         return response.text();
       })
-      .then(encoded => {
-        const bytes = base64ToBytes(encoded);
-        if (bytes.byteLength < 10000) throw new Error('Audio payload is incomplete.');
+    )
+      .then(parts => {
+        const bytes = base64ToBytes(parts.join(''));
+        if (bytes.byteLength < 1000000) {
+          throw new Error('The complete Titan Pulse soundtrack was not loaded.');
+        }
 
         sourceUrl = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
         mediaElement = new Audio(sourceUrl);
@@ -124,23 +108,29 @@
         mediaElement.playsInline = true;
 
         return new Promise((resolve, reject) => {
-          const ready = () => {
-            cleanup();
-            resolve(mediaElement);
-          };
-          const error = () => {
-            cleanup();
-            reject(new Error('Browser could not decode Titan Pulse.'));
-          };
+          let settled = false;
+
           const cleanup = () => {
             mediaElement.removeEventListener('canplaythrough', ready);
             mediaElement.removeEventListener('canplay', ready);
-            mediaElement.removeEventListener('error', error);
+            mediaElement.removeEventListener('error', fail);
+          };
+          const ready = () => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            resolve(mediaElement);
+          };
+          const fail = () => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            reject(new Error('Browser could not decode Titan Pulse.'));
           };
 
           mediaElement.addEventListener('canplaythrough', ready, { once: true });
           mediaElement.addEventListener('canplay', ready, { once: true });
-          mediaElement.addEventListener('error', error, { once: true });
+          mediaElement.addEventListener('error', fail, { once: true });
           mediaElement.load();
 
           setTimeout(() => {
@@ -298,9 +288,8 @@
     if (!context || muted || !started) return;
 
     const duration = 1.55;
-    const buffer = makeNoiseBuffer(duration);
     const source = context.createBufferSource();
-    source.buffer = buffer;
+    source.buffer = makeNoiseBuffer(duration);
 
     const filter = context.createBiquadFilter();
     filter.type = 'bandpass';
@@ -367,14 +356,14 @@
     if (loading) return;
 
     loading = true;
-    failed = false;
     muted = false;
     localStorage.setItem(STORAGE_KEY, 'false');
-    updateToggle();
 
     try {
       const audioContext = ensureContext();
-      const resumePromise = audioContext.state === 'suspended' ? audioContext.resume() : Promise.resolve();
+      const resumePromise = audioContext.state === 'suspended'
+        ? audioContext.resume()
+        : Promise.resolve();
       const audio = await prepareSource();
       await resumePromise;
       connectMediaGraph();
@@ -382,14 +371,13 @@
 
       await audio.play();
       started = true;
-      failed = false;
       ramp(masterGain.gain, DEFAULT_VOLUME, 1.05);
 
       if (app.classList.contains('sybille-control')) enterTakeover();
     } catch (error) {
       console.error('Titan Pulse could not start.', error);
-      failed = true;
       started = false;
+      muted = true;
     } finally {
       loading = false;
       updateToggle();
@@ -406,7 +394,6 @@
 
   async function unmuteMusic() {
     muted = false;
-    failed = false;
     localStorage.setItem(STORAGE_KEY, 'false');
 
     if (!started || !mediaElement) {
@@ -422,7 +409,7 @@
       if (app.classList.contains('sybille-control')) enterTakeover();
     } catch (error) {
       console.error('Titan Pulse could not resume.', error);
-      failed = true;
+      muted = true;
     }
     updateToggle();
   }
@@ -431,8 +418,7 @@
     event.preventDefault();
     event.stopPropagation();
 
-    const playing = started && !muted && !failed;
-    if (playing) muteMusic();
+    if (started && !muted) muteMusic();
     else unmuteMusic();
   });
 
@@ -477,9 +463,8 @@
     playWhoosh
   };
 
-  prepareSource().catch(() => {
-    failed = true;
-    updateToggle();
+  prepareSource().catch(error => {
+    console.error('Titan Pulse preload failed.', error);
   });
   updateToggle();
 })();
