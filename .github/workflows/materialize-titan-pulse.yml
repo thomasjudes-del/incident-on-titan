@@ -3,8 +3,6 @@ name: Materialize Titan Pulse MP3
 on:
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/materialize-titan-pulse.yml'
   workflow_dispatch:
 
 permissions:
@@ -45,10 +43,6 @@ jobs:
                   continue
               first = clean(first_path)
               second = clean(second_path)
-
-              # The repository has contained chunks produced in more than one way.
-              # Test both valid reconstruction strategies and select only the file
-              # whose checksum exactly matches the MP3 approved before integration.
               try:
                   candidates.append((f'{first_path}+{second_path}:joined-text', decode_piece(first + second)))
               except Exception:
